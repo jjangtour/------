@@ -133,14 +133,37 @@ export default function KioskSimulationPage() {
       showResult(resultMessage: string) {
         this.clearButtons();
 
-        this.messageText.setText(
-          `${resultMessage}\n\n키오스크 주문 미션 성공!\n최종 점수: ${this.score}점`
+        const finalScore = this.score;
+
+        const resultData = {
+          studentName: "김하늘",
+          mission: "키오스크 주문 연습",
+          score: finalScore,
+          status: "완료",
+          emotion: "안정",
+          completedAt: new Date().toLocaleString("ko-KR"),
+        };
+
+        const savedResults = JSON.parse(
+          localStorage.getItem("haemileum_results") || "[]"
         );
 
-        this.createButton(400, 340, "다시 연습하기", true, () => {
+        savedResults.push(resultData);
+
+        localStorage.setItem("haemileum_results", JSON.stringify(savedResults));
+
+        this.messageText.setText(
+          `${resultMessage}\n\n키오스크 주문 미션 성공!\n최종 점수: ${finalScore}점\n\n결과가 저장되었습니다.`
+        );
+
+        this.createButton(300, 360, "다시 연습하기", true, () => {
           this.score = 0;
           this.scoreText.setText("점수: 0점");
           this.showStep1();
+        });
+
+        this.createButton(500, 360, "교사 화면 확인", true, () => {
+          window.location.href = "/teacher/dashboard";
         });
       }
 
