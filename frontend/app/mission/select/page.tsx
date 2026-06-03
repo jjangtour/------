@@ -36,6 +36,14 @@ const missions = [
     status: "실행 가능",
     path: "/emotion/check",
   },
+  {
+    id: "routine-check",
+    title: "마이 루틴 체크",
+    category: "[음] 마이 루틴",
+    description: "아침 준비, 가방 챙기기, 기분 말하기 등 일상 과업을 체크하고 성취감을 기록합니다.",
+    status: "실행 가능",
+    path: "/routine/check",
+  },
 ];
 
 export default function MissionSelectPage() {

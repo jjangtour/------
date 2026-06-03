@@ -21,6 +21,9 @@ export default function Header() {
           <Link href="/emotion/check" className="hover:text-blue-700">
             감정 기록
           </Link>
+          <Link href="/routine/check" className="hover:text-blue-700">
+            루틴 체크
+          </Link>
           <Link href="/teacher/dashboard" className="hover:text-blue-700">
             교사 대시보드
           </Link>
