@@ -1,0 +1,19 @@
+{
+  "name": "해밀이음",
+  "short_name": "해밀이음",
+  "description": "경계선 지능 학생을 위한 AI 에듀테크 플랫폼",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#1d4ed8",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icons/haemileum-icon.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

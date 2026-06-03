@@ -1,0 +1,7 @@
+﻿<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="112" fill="#1D4ED8"/>
+  <circle cx="256" cy="256" r="150" fill="#EFF6FF"/>
+  <path d="M165 270C190 210 230 180 285 180C335 180 370 215 370 260C370 315 325 355 262 355C215 355 180 335 155 300" stroke="#1D4ED8" stroke-width="34" stroke-linecap="round"/>
+  <path d="M300 160L370 160L370 230" stroke="#1D4ED8" stroke-width="34" stroke-linecap="round" stroke-linejoin="round"/>
+  <text x="256" y="285" text-anchor="middle" font-size="72" font-weight="700" fill="#1D4ED8" font-family="Arial, sans-serif">해</text>
+</svg>
