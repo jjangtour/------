@@ -20,14 +20,22 @@ const missions = [
     status: "실행 가능",
     path: "/simulation/bus",
   },
- {
-  id: "school-talk",
-  title: "학교생활 대화 연습",
-  category: "[밀] 사회성 훈련",
-  description: "친구와의 갈등 상황에서 적절한 말과 행동을 선택하는 연습입니다.",
-  status: "실행 가능",
-  path: "/simulation/school-talk",
-},
+  {
+    id: "school-talk",
+    title: "학교생활 대화 연습",
+    category: "[밀] 사회성 훈련",
+    description: "친구와의 갈등 상황에서 적절한 말과 행동을 선택하는 연습입니다.",
+    status: "실행 가능",
+    path: "/simulation/school-talk",
+  },
+  {
+    id: "emotion-check",
+    title: "감정 기록 및 칭찬 스탬프",
+    category: "[음] 마음 이음",
+    description: "오늘의 기분을 선택하고, 스스로 잘한 점을 칭찬 스탬프로 기록합니다.",
+    status: "실행 가능",
+    path: "/emotion/check",
+  },
 ];
 
 export default function MissionSelectPage() {
