@@ -15,7 +15,9 @@ export default function Header() {
           <Link href="/student/select" className="hover:text-blue-700">
             학생 선택
           </Link>
-          
+          <Link href="/student/home" className="hover:text-blue-700">
+            학생 홈
+          </Link>
           <Link href="/mission/select" className="hover:text-blue-700">
             미션 선택
           </Link>
@@ -30,6 +32,9 @@ export default function Header() {
           </Link>
           <Link href="/parent/dashboard" className="hover:text-blue-700">
             학부모 화면
+          </Link>
+          <Link href="/admin/tools" className="hover:text-blue-700">
+            관리자
           </Link>
         </nav>
       </div>
