@@ -69,7 +69,6 @@ export default function Home() {
           >
             학부모 화면
           </Link>
-          
         </div>
       </section>
     </main>

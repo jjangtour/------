@@ -1,41 +1,35 @@
 import Link from "next/link";
 
+const menuItems = [
+  { href: "/", label: "홈" },
+  { href: "/student/select", label: "학생 선택" },
+  { href: "/student/home", label: "학생 홈" },
+  { href: "/mission/select", label: "미션 선택" },
+  { href: "/emotion/check", label: "감정 기록" },
+  { href: "/routine/check", label: "루틴 체크" },
+  { href: "/teacher/dashboard", label: "교사 대시보드" },
+  { href: "/parent/dashboard", label: "학부모 화면" },
+  { href: "/admin/tools", label: "관리자" },
+];
+
 export default function Header() {
   return (
     <header className="border-b border-slate-200 bg-white">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
+      <div className="mx-auto flex max-w-6xl flex-col gap-3 px-6 py-4 md:flex-row md:items-center md:justify-between">
         <Link href="/" className="text-xl font-bold text-blue-700">
           해밀이음
         </Link>
 
-        <nav className="flex items-center gap-5 text-sm font-semibold text-slate-600">
-          <Link href="/" className="hover:text-blue-700">
-            홈
-          </Link>
-          <Link href="/student/select" className="hover:text-blue-700">
-            학생 선택
-          </Link>
-          <Link href="/student/home" className="hover:text-blue-700">
-            학생 홈
-          </Link>
-          <Link href="/mission/select" className="hover:text-blue-700">
-            미션 선택
-          </Link>
-          <Link href="/emotion/check" className="hover:text-blue-700">
-            감정 기록
-          </Link>
-          <Link href="/routine/check" className="hover:text-blue-700">
-            루틴 체크
-          </Link>
-          <Link href="/teacher/dashboard" className="hover:text-blue-700">
-            교사 대시보드
-          </Link>
-          <Link href="/parent/dashboard" className="hover:text-blue-700">
-            학부모 화면
-          </Link>
-          <Link href="/admin/tools" className="hover:text-blue-700">
-            관리자
-          </Link>
+        <nav className="flex flex-wrap gap-2 text-sm font-semibold text-slate-600 md:justify-end">
+          {menuItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="rounded-full bg-slate-50 px-3 py-2 hover:bg-blue-50 hover:text-blue-700"
+            >
+              {item.label}
+            </Link>
+          ))}
         </nav>
       </div>
     </header>

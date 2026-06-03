@@ -77,7 +77,7 @@ export default function ParentDashboardPage() {
           </p>
         </div>
 
-        <div className="mb-8 grid grid-cols-1 gap-5 md:grid-cols-4">
+        <div className="mb-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <ParentCard
             title="최근 미션"
             value={latestResult?.mission || "기록 없음"}

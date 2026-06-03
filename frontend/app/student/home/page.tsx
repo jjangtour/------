@@ -47,7 +47,7 @@ export default function StudentHomePage() {
           </p>
         </div>
 
-        <div className="mb-8 grid grid-cols-1 gap-5 md:grid-cols-4">
+        <div className="mb-8 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
           <StudentActionCard
             title="미션 선택"
             description="키오스크, 버스, 학교생활 대화 미션을 선택합니다."
