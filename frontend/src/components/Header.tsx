@@ -21,6 +21,9 @@ export default function Header() {
           <Link href="/teacher/dashboard" className="hover:text-blue-700">
             교사 대시보드
           </Link>
+          <Link href="/parent/dashboard" className="hover:text-blue-700">
+            학부모 화면
+          </Link>
         </nav>
       </div>
     </header>

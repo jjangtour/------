@@ -50,7 +50,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="mt-10 flex gap-4">
+        <div className="mt-10 flex flex-wrap justify-center gap-4">
           <Link
             href="/student/select"
             className="rounded-xl bg-blue-700 px-6 py-3 font-semibold text-white shadow-sm hover:bg-blue-800"
@@ -62,6 +62,18 @@ export default function Home() {
             className="rounded-xl bg-white px-6 py-3 font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
           >
             교사용 대시보드
+          </Link>
+          <Link
+            href="/parent/dashboard"
+            className="rounded-xl bg-white px-6 py-3 font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
+          >
+            학부모 화면
+          </Link>
+          <Link
+            href="/parent/dashboard"
+            className="rounded-xl bg-white px-6 py-3 font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
+          >
+            학부모 화면
           </Link>
         </div>
       </section>
