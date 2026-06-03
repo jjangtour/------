@@ -134,9 +134,11 @@ export default function KioskSimulationPage() {
         this.clearButtons();
 
         const finalScore = this.score;
+        const selectedStudent =
+          localStorage.getItem("haemileum_selected_student") || "이름 미선택";
 
         const resultData = {
-          studentName: "김하늘",
+          studentName: selectedStudent,
           mission: "키오스크 주문 연습",
           score: finalScore,
           status: "완료",

@@ -51,9 +51,12 @@ export default function Home() {
         </div>
 
         <div className="mt-10 flex gap-4">
-          <button className="rounded-xl bg-blue-700 px-6 py-3 font-semibold text-white shadow-sm hover:bg-blue-800">
+          <Link
+            href="/student/select"
+            className="rounded-xl bg-blue-700 px-6 py-3 font-semibold text-white shadow-sm hover:bg-blue-800"
+          >
             학생으로 시작하기
-          </button>
+          </Link>
           <Link
             href="/teacher/dashboard"
             className="rounded-xl bg-white px-6 py-3 font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
