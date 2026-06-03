@@ -20,14 +20,14 @@ const missions = [
     status: "실행 가능",
     path: "/simulation/bus",
   },
-  {
-    id: "school-talk",
-    title: "학교생활 대화 연습",
-    category: "[밀] 사회성 훈련",
-    description: "친구와의 갈등 상황에서 적절한 말과 행동을 선택하는 연습입니다.",
-    status: "준비 예정",
-    path: "",
-  },
+ {
+  id: "school-talk",
+  title: "학교생활 대화 연습",
+  category: "[밀] 사회성 훈련",
+  description: "친구와의 갈등 상황에서 적절한 말과 행동을 선택하는 연습입니다.",
+  status: "실행 가능",
+  path: "/simulation/school-talk",
+},
 ];
 
 export default function MissionSelectPage() {
