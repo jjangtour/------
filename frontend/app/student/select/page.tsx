@@ -25,7 +25,7 @@ export default function StudentSelectPage() {
 
   const selectStudent = (studentName: string) => {
     localStorage.setItem("haemileum_selected_student", studentName);
-    router.push("/mission/select");
+    router.push("/student/home");
   };
 
   return (

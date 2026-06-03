@@ -69,12 +69,7 @@ export default function Home() {
           >
             학부모 화면
           </Link>
-          <Link
-            href="/parent/dashboard"
-            className="rounded-xl bg-white px-6 py-3 font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
-          >
-            학부모 화면
-          </Link>
+          
         </div>
       </section>
     </main>

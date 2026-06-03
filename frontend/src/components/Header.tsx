@@ -15,6 +15,7 @@ export default function Header() {
           <Link href="/student/select" className="hover:text-blue-700">
             학생 선택
           </Link>
+          
           <Link href="/mission/select" className="hover:text-blue-700">
             미션 선택
           </Link>
