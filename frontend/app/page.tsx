@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 export default function Home() {
   return (
     <main className="min-h-screen bg-slate-50">
@@ -52,9 +54,12 @@ export default function Home() {
           <button className="rounded-xl bg-blue-700 px-6 py-3 font-semibold text-white shadow-sm hover:bg-blue-800">
             학생으로 시작하기
           </button>
-          <button className="rounded-xl bg-white px-6 py-3 font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50">
+          <Link
+            href="/teacher/dashboard"
+            className="rounded-xl bg-white px-6 py-3 font-semibold text-slate-700 shadow-sm ring-1 ring-slate-200 hover:bg-slate-50"
+          >
             교사용 대시보드
-          </button>
+          </Link>
         </div>
       </section>
     </main>
