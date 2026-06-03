@@ -16,9 +16,9 @@ const missions = [
     id: "bus",
     title: "대중교통 이용 연습",
     category: "[이] 일상 시뮬레이션",
-    description: "버스 정류장 찾기, 노선 확인, 하차 선택을 연습합니다.",
-    status: "준비 예정",
-    path: "",
+    description: "목적지 확인, 버스 번호 선택, 하차 정류장 선택을 연습합니다.",
+    status: "실행 가능",
+    path: "/simulation/bus",
   },
   {
     id: "school-talk",
