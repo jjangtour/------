@@ -1,7 +1,8 @@
-﻿"use client";
+"use client";
 
 import { useMemo, useSyncExternalStore } from "react";
 import Link from "next/link";
+import { getLevelInfo } from "@/utils/level";
 
 type StudentResult = {
   studentName: string;
@@ -19,6 +20,20 @@ const quickActions = [
     href: "/mission/select",
     icon: "🎯",
     color: "border-sky-200 bg-sky-50 text-sky-900 hover:bg-sky-100",
+  },
+  {
+    title: "마을 탐색",
+    description: "캐릭터를 움직여 미션을 찾아요.",
+    href: "/simulation/town",
+    icon: "MAP",
+    color: "border-lime-200 bg-lime-50 text-lime-900 hover:bg-lime-100",
+  },
+  {
+    title: "우리집",
+    description: "미션에 쓸 물건을 준비해요.",
+    href: "/student/house",
+    icon: "집",
+    color: "border-amber-200 bg-amber-50 text-amber-900 hover:bg-amber-100",
   },
   {
     title: "마음 고르기",
@@ -45,14 +60,24 @@ const quickActions = [
 
 const recommendedMissions = [
   {
-    title: "키오스크 주문",
-    description: "음식 고르기, 수량 확인, 결제를 천천히 연습합니다.",
+    title: "패스트푸드 주문",
+    description: "불고기 버거 세트를 가져가기로 주문하고, 카드 전용 기계에서 안전하게 계산합니다.",
     href: "/simulation/kiosk",
     tag: "[이] 일상",
     icon: "🍔",
     level: "쉬움",
-    steps: ["메뉴 보기", "수량 고르기", "결제하기"],
+    steps: ["가져가기 선택", "메뉴 고르기", "잠깐 확인!", "카드 결제"],
     accent: "bg-amber-100 text-amber-900",
+  },
+  {
+    title: "ATM 사용하기",
+    description: "용돈을 찾으면서 낯선 사람 요청을 거절하고 비밀번호를 안전하게 지킵니다.",
+    href: "/simulation/atm",
+    tag: "[이] 생활",
+    icon: "🏧",
+    level: "보통",
+    steps: ["카드 넣기", "돈 찾기", "비밀번호 지키기", "카드 챙기기"],
+    accent: "bg-blue-100 text-blue-900",
   },
   {
     title: "버스 타기",
@@ -73,6 +98,16 @@ const recommendedMissions = [
     level: "연습",
     steps: ["상황 보기", "말 고르기", "결과 확인"],
     accent: "bg-violet-100 text-violet-900",
+  },
+  {
+    title: "사기 방어와 마음 관리",
+    description: "스마트폰 스미싱 문자를 구별하고 불안한 마음을 진정시킵니다.",
+    href: "/simulation/safety-sos",
+    tag: "[음] 안전/마음",
+    icon: "🛡️",
+    level: "보통",
+    steps: ["문자 분석", "감정 버리기", "안정 호흡"],
+    accent: "bg-teal-100 text-teal-900",
   },
 ];
 
@@ -98,6 +133,13 @@ const getSelectedStudent = () =>
 const getSavedResults = () =>
   localStorage.getItem("haemileum_results") || emptyResults;
 
+const getSelectedStudentXp = () => {
+  if (typeof window === "undefined") return 0;
+  const name = localStorage.getItem("haemileum_selected_student") || "이름 미선택";
+  const xpStr = localStorage.getItem("haemileum_student_xp_" + name) || "0";
+  return parseInt(xpStr, 10);
+};
+
 export default function StudentHomePage() {
   const studentName = useSyncExternalStore(
     subscribeToStorage,
@@ -109,6 +151,13 @@ export default function StudentHomePage() {
     getSavedResults,
     () => emptyResults
   );
+  const totalXp = useSyncExternalStore(
+    subscribeToStorage,
+    getSelectedStudentXp,
+    () => 0
+  );
+
+  const levelInfo = useMemo(() => getLevelInfo(totalXp), [totalXp]);
 
   const recentResults = useMemo(() => {
     try {
@@ -141,6 +190,47 @@ export default function StudentHomePage() {
               <p className="mt-5 max-w-2xl text-base leading-8 text-emerald-50">
                 틀려도 괜찮습니다. 다시 고르고, 다시 연습하면 됩니다.
               </p>
+
+              {/* 레벨 및 경험치 게이지 카드 */}
+              <div className="mt-6 rounded-2xl bg-white/10 p-5 ring-1 ring-white/20">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white text-3xl shadow-sm">
+                      {levelInfo.badge}
+                    </span>
+                    <div>
+                      <p className="text-xs font-bold text-emerald-200">나의 레벨</p>
+                      <h3 className="text-xl font-black text-white">
+                        {levelInfo.title}
+                      </h3>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-bold text-emerald-200">총 경험치</p>
+                    <p className="text-lg font-black text-white">{levelInfo.totalXp} XP</p>
+                  </div>
+                </div>
+
+                <div className="mt-4">
+                  <div className="flex items-center justify-between text-xs font-bold text-emerald-100 mb-1.5">
+                    <span>레벨업 게이지</span>
+                    <span>{levelInfo.currentXpInLevel} / {levelInfo.xpNeededForNext} XP</span>
+                  </div>
+                  <div className="h-4 w-full overflow-hidden rounded-full bg-white/20">
+                    <div
+                      className="h-full rounded-full bg-yellow-400 transition-all duration-500"
+                      style={{
+                        width: `${(levelInfo.currentXpInLevel / levelInfo.xpNeededForNext) * 100}%`,
+                      }}
+                    />
+                  </div>
+                  <p className="mt-2 text-xs font-semibold text-emerald-100/90">
+                    {levelInfo.level >= 5
+                      ? "최고 레벨 달성! 대단해요. 당신은 완벽한 안전 마스터입니다! 👑"
+                      : `다음 레벨까지 ${levelInfo.xpNeededForNext - levelInfo.currentXpInLevel} XP가 남았습니다.`}
+                  </p>
+                </div>
+              </div>
 
               <div className="mt-7 grid gap-3 sm:grid-cols-3">
                 {cheerMessages.map((message) => (

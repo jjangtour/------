@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useSyncExternalStore } from "react";
+import { useRef, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
+import { getLevelInfo } from "@/utils/level";
 
 type RoutineItem = {
   id: string;
@@ -19,6 +20,7 @@ type RoutineRecord = {
   emotion: string;
   completedAt: string;
   routines: string[];
+  xpEarned?: number;
 };
 
 const routineItems: RoutineItem[] = [
@@ -96,6 +98,7 @@ function readJsonArray<T>(key: string): T[] {
 
 export default function RoutineCheckPage() {
   const router = useRouter();
+  const hasSavedRef = useRef(false);
   const studentName = useSyncExternalStore(
     subscribeToStorage,
     getSelectedStudent,
@@ -104,11 +107,19 @@ export default function RoutineCheckPage() {
 
   const [checkedItems, setCheckedItems] = useState<string[]>([]);
   const [message, setMessage] = useState("");
+  const [levelUpInfo, setLevelUpInfo] = useState<{
+    oldLevel: number;
+    newLevel: number;
+    title: string;
+    badge: string;
+  } | null>(null);
 
   const completedCount = checkedItems.length;
   const totalCount = routineItems.length;
   const progress = Math.round((completedCount / totalCount) * 100);
   const score = completedCount * 20;
+  const previewXp =
+    completedCount > 0 ? Math.max(20, Math.min(50, completedCount * 10)) : 0;
 
   const toggleRoutine = (routineId: string) => {
     setMessage("");
@@ -125,10 +136,16 @@ export default function RoutineCheckPage() {
       return;
     }
 
+    if (hasSavedRef.current) {
+      setMessage("이미 저장됐어요. 오늘 루틴 경험치도 반영되어 있습니다.");
+      return;
+    }
+
     const completedTitles = routineItems
       .filter((item) => checkedItems.includes(item.id))
       .map((item) => item.title);
     const completedAt = new Date().toLocaleString("ko-KR");
+    const xpEarned = previewXp;
     const routineRecord: RoutineRecord = {
       studentName,
       mission: "루틴 체크",
@@ -137,6 +154,7 @@ export default function RoutineCheckPage() {
       emotion: checkedItems.length >= 4 ? "안정" : "보통",
       completedAt,
       routines: completedTitles,
+      xpEarned,
     };
 
     const savedRoutines = readJsonArray<RoutineRecord>("haemileum_routines");
@@ -150,6 +168,7 @@ export default function RoutineCheckPage() {
       status: string;
       emotion: string;
       completedAt: string;
+      xpEarned?: number;
     }>("haemileum_results");
 
     savedResults.push({
@@ -159,10 +178,34 @@ export default function RoutineCheckPage() {
       status: "완료",
       emotion: checkedItems.length >= 4 ? "안정" : "보통",
       completedAt,
+      xpEarned,
     });
 
     localStorage.setItem("haemileum_results", JSON.stringify(savedResults));
-    setMessage("저장됐어요. 오늘 해낸 일을 잘 기록했습니다.");
+
+    const storageKey = `haemileum_student_xp_${studentName}`;
+    const previousXp = Number.parseInt(
+      localStorage.getItem(storageKey) || "0",
+      10
+    );
+    const safePreviousXp = Number.isNaN(previousXp) ? 0 : previousXp;
+    const nextXp = safePreviousXp + xpEarned;
+    localStorage.setItem(storageKey, String(nextXp));
+
+    const previousLevel = getLevelInfo(safePreviousXp);
+    const nextLevel = getLevelInfo(nextXp);
+
+    if (nextLevel.level > previousLevel.level) {
+      setLevelUpInfo({
+        oldLevel: previousLevel.level,
+        newLevel: nextLevel.level,
+        title: nextLevel.title,
+        badge: nextLevel.badge,
+      });
+    }
+
+    hasSavedRef.current = true;
+    setMessage(`저장됐어요. 오늘 루틴을 기록하고 ${xpEarned} XP를 얻었어요.`);
   };
 
   return (
@@ -282,13 +325,18 @@ export default function RoutineCheckPage() {
         </div>
 
         <div className="mt-6 rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
             <SummaryItem
               title="완료한 루틴"
               value={`${completedCount}개`}
               helper={`전체 ${totalCount}개 중`}
             />
             <SummaryItem title="오늘 점수" value={`${score}점`} helper="체크한 만큼 올라가요" />
+            <SummaryItem
+              title="경험치"
+              value={`${previewXp} XP`}
+              helper="저장하면 획득"
+            />
             <SummaryItem title="학생 이름" value={studentName} helper="기록될 이름" />
           </div>
 
@@ -325,6 +373,28 @@ export default function RoutineCheckPage() {
           </div>
         </div>
       </section>
+
+      {levelUpInfo && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4">
+          <div className="w-full max-w-sm rounded-lg border border-amber-300 bg-slate-950 p-6 text-center text-white shadow-2xl">
+            <p className="text-sm font-black text-amber-200">레벨 업</p>
+            <h2 className="mt-2 text-2xl font-black">{levelUpInfo.title}</h2>
+            <p className="mt-3 text-sm font-semibold leading-6 text-slate-300">
+              {levelUpInfo.oldLevel}레벨에서 {levelUpInfo.newLevel}레벨이 되었어요.
+            </p>
+            <div className="mx-auto mt-5 flex h-16 w-16 items-center justify-center rounded-lg bg-amber-300 text-lg font-black text-slate-950">
+              {levelUpInfo.badge}
+            </div>
+            <button
+              type="button"
+              onClick={() => setLevelUpInfo(null)}
+              className="mt-5 w-full rounded-md bg-amber-300 py-3 text-sm font-black text-slate-950 hover:bg-amber-200"
+            >
+              확인
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

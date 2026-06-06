@@ -67,6 +67,12 @@ export default function Home() {
                 학생으로 시작하기
               </Link>
               <Link
+                href="/simulation/town"
+                className="rounded-lg bg-sky-700 px-5 py-3 text-base font-black text-white shadow-sm hover:bg-sky-800"
+              >
+                2D 마을 탐색하기
+              </Link>
+              <Link
                 href="/simulation/kiosk"
                 className="rounded-lg bg-slate-950 px-5 py-3 text-base font-black text-white shadow-sm hover:bg-slate-800"
               >
