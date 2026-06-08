@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore, useState, useEffect } from "react";
 import Link from "next/link";
 import { getLevelInfo } from "@/utils/level";
 
@@ -14,6 +14,14 @@ type StudentResult = {
 };
 
 const quickActions = [
+  {
+    title: "집으로 가기",
+    description: "안심 귀가 길 안내를 시작해요.",
+    href: "/safe-return",
+    icon: "🏠",
+    color: "border-emerald-400 bg-emerald-600 text-white hover:bg-emerald-700",
+    highlight: true,
+  },
   {
     title: "다른 미션 보기",
     description: "연습할 활동을 직접 고릅니다.",
@@ -157,6 +165,27 @@ export default function StudentHomePage() {
     () => 0
   );
 
+  const [showPrivacyModal, setShowPrivacyModal] = useState(false);
+  const [agreeTerms, setAgreeTerms] = useState(false);
+  const [agreeLocation, setAgreeLocation] = useState(false);
+
+  useEffect(() => {
+    const agreed = localStorage.getItem("haemileum_privacy_agreed");
+    if (agreed !== "true") {
+      setShowPrivacyModal(true);
+    }
+  }, []);
+
+  const handleAgreePrivacy = () => {
+    if (agreeTerms && agreeLocation) {
+      localStorage.setItem("haemileum_privacy_agreed", "true");
+      setShowPrivacyModal(false);
+      alert("보호자 동의가 완료되었습니다. 안전하게 해밀이음을 이용해보세요!");
+    } else {
+      alert("모든 필수 항목에 동의해야 서비스를 시작할 수 있습니다.");
+    }
+  };
+
   const levelInfo = useMemo(() => getLevelInfo(totalXp), [totalXp]);
 
   const recentResults = useMemo(() => {
@@ -176,7 +205,8 @@ export default function StudentHomePage() {
   const heroMission = recommendedMissions[0];
 
   return (
-    <main className="min-h-screen bg-[#f7faf8] px-4 py-6 text-slate-900 sm:px-6 lg:py-10">
+    <>
+      <main className="min-h-screen bg-[#f7faf8] px-4 py-6 text-slate-900 sm:px-6 lg:py-10">
       <section className="mx-auto max-w-6xl">
         <div className="mb-6 overflow-hidden rounded-lg border border-emerald-100 bg-white shadow-sm">
           <div className="grid gap-0 lg:grid-cols-[1.08fr_0.92fr]">
@@ -297,20 +327,66 @@ export default function StudentHomePage() {
           />
         </div>
 
+        {/* 안심 귀가 동행 서비스 섹션 */}
+        <div className="mb-8 rounded-2xl bg-white p-5 shadow-sm border-2 border-emerald-100 sm:p-6">
+          <div className="flex items-center gap-3">
+            <span className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-2xl">🛡️</span>
+            <div>
+              <p className="text-sm font-bold text-emerald-700">안심 귀가 동행</p>
+              <h2 className="text-xl font-black text-slate-950 sm:text-2xl">오늘도 안전하게 이동해요</h2>
+            </div>
+          </div>
+          <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <Link
+              href="/student/homecoming"
+              className="group flex flex-col items-center justify-center rounded-xl border-4 border-emerald-500 bg-emerald-50 p-6 transition hover:bg-emerald-100 active:scale-95"
+            >
+              <span className="mb-3 text-5xl transition-transform group-hover:scale-110 sm:text-6xl">🏠</span>
+              <span className="text-xl font-black text-emerald-900 sm:text-2xl">집으로 가기</span>
+            </Link>
+            <button
+              onClick={() => {
+                const now = new Date().toLocaleString("ko-KR");
+                localStorage.setItem("haemileum_homecoming_state", JSON.stringify({
+                  studentName,
+                  status: "위치 공유 중",
+                  updatedAt: now,
+                  message: "보호자에게 위치를 한 번 전송했습니다.",
+                  isSos: false,
+                  phase: "idle"
+                }));
+                window.dispatchEvent(new Event("storage"));
+                alert("보호자에게 현재 위치를 보냈습니다.");
+              }}
+              className="group flex flex-col items-center justify-center rounded-xl border-4 border-sky-300 bg-sky-50 p-6 transition hover:bg-sky-100 active:scale-95"
+            >
+              <span className="mb-3 text-5xl transition-transform group-hover:scale-110 sm:text-6xl">👨‍👩‍👦</span>
+              <span className="text-xl font-black text-sky-900 sm:text-2xl">내 위치 보내기</span>
+            </button>
+            <Link
+              href="/student/homecoming?sos=true"
+              className="group flex flex-col items-center justify-center rounded-xl border-4 border-rose-500 bg-rose-50 p-6 transition hover:bg-rose-100 active:scale-95"
+            >
+              <span className="mb-3 text-5xl transition-transform group-hover:scale-110 sm:text-6xl">🆘</span>
+              <span className="text-xl font-black text-rose-700 sm:text-2xl">도움이 필요해요</span>
+            </Link>
+          </div>
+        </div>
+
         <div className="mb-6 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {quickActions.map((action) => (
             <Link
               key={action.title}
               href={action.href}
-              className={`rounded-lg border p-5 shadow-sm transition ${action.color}`}
+              className={`rounded-lg border p-5 shadow-sm transition ${"highlight" in action && action.highlight ? "sm:col-span-2 lg:col-span-1" : ""} ${action.color}`}
             >
               <div className="flex items-center gap-3">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-white text-2xl font-black shadow-sm">
+                <span className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-2xl font-black shadow-sm ${"highlight" in action && action.highlight ? "bg-white/20" : "bg-white"}`}>
                   {action.icon}
                 </span>
                 <div>
                   <h2 className="text-lg font-black">{action.title}</h2>
-                  <p className="mt-1 text-sm leading-5 opacity-80">
+                  <p className={`mt-1 text-sm leading-5 ${"highlight" in action && action.highlight ? "text-emerald-50" : "opacity-80"}`}>
                     {action.description}
                   </p>
                 </div>
@@ -450,6 +526,64 @@ export default function StudentHomePage() {
         </div>
       </section>
     </main>
+
+    {/* 법정대리인 동의 온보딩 모달 */}
+    {showPrivacyModal && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/90 p-4 backdrop-blur-md">
+        <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl sm:p-8 animate-in fade-in zoom-in duration-300">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100 text-3xl mb-5">
+            👨‍👩‍👧
+          </div>
+          <h2 className="text-center text-2xl font-black text-slate-900">법정대리인 확인</h2>
+          <p className="mt-3 text-center text-sm font-semibold leading-relaxed text-slate-600">
+            해밀이음은 '공교육 에듀테크 가이드라인'에 따라 <strong>만 14세 미만 아동</strong>의 위치 정보 및 민감 정보를 보호하기 위해 보호자(법정대리인)의 직접적인 동의를 받습니다.
+          </p>
+
+          <div className="mt-8 space-y-4">
+            <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 cursor-pointer hover:bg-slate-100 transition">
+              <input
+                type="checkbox"
+                className="mt-1 h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600"
+                checked={agreeTerms}
+                onChange={(e) => setAgreeTerms(e.target.checked)}
+              />
+              <div className="flex-1">
+                <span className="block text-sm font-bold text-slate-900">(필수) 서비스 이용약관 및 개인정보 처리방침 동의</span>
+                <Link href="/privacy" target="_blank" className="text-xs font-bold text-emerald-600 hover:underline mt-1 inline-block">처리방침 전문 보기 ↗</Link>
+              </div>
+            </label>
+
+            <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-4 cursor-pointer hover:bg-slate-100 transition">
+              <input
+                type="checkbox"
+                className="mt-1 h-5 w-5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-600"
+                checked={agreeLocation}
+                onChange={(e) => setAgreeLocation(e.target.checked)}
+              />
+              <div className="flex-1">
+                <span className="block text-sm font-bold text-slate-900">(필수) 실시간 위치 및 마음 상태 수집 동의</span>
+                <span className="block text-xs font-semibold text-slate-500 mt-1">
+                  안심 귀가 동행 시 아이의 위치를 보호자 대시보드로 실시간 전송합니다.
+                </span>
+              </div>
+            </label>
+          </div>
+
+          <button
+            onClick={handleAgreePrivacy}
+            disabled={!agreeTerms || !agreeLocation}
+            className={`mt-8 w-full rounded-xl py-4 text-lg font-black transition-all ${
+              agreeTerms && agreeLocation
+                ? "bg-emerald-600 text-white shadow-md hover:bg-emerald-700 active:scale-95"
+                : "bg-slate-200 text-slate-400 cursor-not-allowed"
+            }`}
+          >
+            모두 확인 후 동의하기
+          </button>
+        </div>
+      </div>
+    )}
+  </>
   );
 }
 

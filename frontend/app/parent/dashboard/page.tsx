@@ -1,7 +1,53 @@
 "use client";
 
-import { useMemo, useSyncExternalStore } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
+
+type ReturnData = {
+  studentName: string;
+  phase: string;
+  method: string;
+  updatedAt: string;
+  busNumber?: string;
+  stopsLeft?: number;
+  step?: string;
+  location?: LocationSnapshot;
+  mapUrl?: string;
+};
+
+type LocationSnapshot = {
+  latitude: number;
+  longitude: number;
+  accuracy?: number;
+  source: "gps" | "demo";
+  capturedAt: string;
+  note?: string;
+  issue?: "insecure" | "denied" | "unavailable" | "timeout" | "unsupported";
+};
+
+type RoutePlan = {
+  homeAddress: string;
+  destinationAddress: string;
+  waypoints: string[];
+  travelMode: "walking" | "transit" | "driving";
+  note: string;
+  updatedAt: string;
+};
+
+const PHASE_LABELS: Record<string, { label: string; color: string; icon: string }> = {
+  "finding": { label: "현재 위치 확인 중", color: "text-emerald-800 bg-emerald-100", icon: "📍" },
+  "method": { label: "귀가 방법 선택 중", color: "text-emerald-800 bg-emerald-100", icon: "🧭" },
+  "walking": { label: "걸어서 이동 중", color: "text-emerald-800 bg-emerald-100", icon: "🚶" },
+  "bus-to-stop": { label: "정류장으로 이동 중", color: "text-sky-800 bg-sky-100", icon: "🚏" },
+  "bus-waiting": { label: "버스 기다리는 중", color: "text-sky-800 bg-sky-100", icon: "⏳" },
+  "bus-arrived": { label: "버스 탑승 준비", color: "text-orange-800 bg-orange-100", icon: "🚌" },
+  "bus-riding": { label: "버스 탑승 중", color: "text-sky-800 bg-sky-100", icon: "🚌" },
+  "bus-alighting": { label: "버스에서 내리는 중", color: "text-indigo-800 bg-indigo-100", icon: "🔔" },
+  "bus-walk-home": { label: "집까지 걸어가는 중", color: "text-emerald-800 bg-emerald-100", icon: "🚶" },
+  "bus-walking-home": { label: "집까지 걸어가는 중", color: "text-emerald-800 bg-emerald-100", icon: "🚶" },
+  "sos": { label: "도움 요청 중", color: "text-red-800 bg-red-100", icon: "🆘" },
+};
+
 
 type StudentResult = {
   studentName: string;
@@ -30,7 +76,19 @@ type EmotionRecord = {
   completedAt: string;
 };
 
+type HomecomingState = {
+  studentName: string;
+  status: string;
+  updatedAt: string;
+  message: string;
+  isSos: boolean;
+  phase: string;
+  battery: number;
+};
+
 const sampleStudent = "김하늘";
+const ROUTE_PLAN_KEY = "haemileum_return_route_plan";
+const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
 const sampleResults: StudentResult[] = [
   {
@@ -93,13 +151,116 @@ const homeGuideItems = [
   },
 ];
 
+function getMapEmbedUrl(location: LocationSnapshot) {
+  if (!GOOGLE_MAPS_API_KEY) return null;
+
+  const params = new URLSearchParams({
+    key: GOOGLE_MAPS_API_KEY,
+    q: `${location.latitude},${location.longitude}`,
+    zoom: "17",
+    language: "ko",
+    region: "KR",
+  });
+
+  return `https://www.google.com/maps/embed/v1/place?${params.toString()}`;
+}
+
+function getMapUrl(location: LocationSnapshot) {
+  const params = new URLSearchParams({
+    api: "1",
+    query: `${location.latitude},${location.longitude}`,
+  });
+
+  return `https://www.google.com/maps/search/?${params.toString()}`;
+}
+
+function getMethodLabel(method: string) {
+  if (method === "bus") return "버스";
+  if (method === "walking") return "도보";
+  return method;
+}
+
+function parseRoutePlan(value: string): RoutePlan | null {
+  if (!value) return null;
+  try {
+    return JSON.parse(value) as RoutePlan;
+  } catch {
+    return null;
+  }
+}
+
+function getRoutePlanStr() {
+  return typeof window !== "undefined"
+    ? localStorage.getItem(ROUTE_PLAN_KEY) ?? ""
+    : "";
+}
+
+function getInitialRoutePlan() {
+  return parseRoutePlan(getRoutePlanStr());
+}
+
+function parseWaypoints(value: string) {
+  return value
+    .split(/\r?\n|,/)
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function getRouteDestination(plan: RoutePlan) {
+  return plan.destinationAddress || plan.homeAddress;
+}
+
+function getGoogleDirectionsUrl(plan: RoutePlan, origin?: LocationSnapshot | null) {
+  const params = new URLSearchParams({
+    api: "1",
+    destination: getRouteDestination(plan),
+    travelmode: plan.travelMode,
+  });
+
+  if (origin) {
+    params.set("origin", `${origin.latitude},${origin.longitude}`);
+  }
+
+  if (plan.waypoints.length > 0) {
+    params.set("waypoints", plan.waypoints.join("|"));
+  }
+
+  return `https://www.google.com/maps/dir/?${params.toString()}`;
+}
+
+function getGoogleDirectionsEmbedUrl(plan: RoutePlan, origin?: LocationSnapshot | null) {
+  if (!GOOGLE_MAPS_API_KEY || !origin) return null;
+
+  const params = new URLSearchParams({
+    key: GOOGLE_MAPS_API_KEY,
+    origin: `${origin.latitude},${origin.longitude}`,
+    destination: getRouteDestination(plan),
+    mode: plan.travelMode,
+    language: "ko",
+    region: "KR",
+  });
+
+  if (plan.waypoints.length > 0) {
+    params.set("waypoints", plan.waypoints.join("|"));
+  }
+
+  return `https://www.google.com/maps/embed/v1/directions?${params.toString()}`;
+}
+
 const subscribeToStorage = (onStoreChange: () => void) => {
   window.addEventListener("storage", onStoreChange);
-
-  return () => {
-    window.removeEventListener("storage", onStoreChange);
-  };
+  return () => window.removeEventListener("storage", onStoreChange);
 };
+
+const getReturnActiveStr = () =>
+  typeof window !== "undefined"
+    ? localStorage.getItem("haemileum_return_active") ?? "false"
+    : "false";
+
+const getReturnDataStr = () =>
+  typeof window !== "undefined"
+    ? localStorage.getItem("haemileum_return_data") ?? ""
+    : "";
 
 const getSelectedStudent = () =>
   localStorage.getItem("haemileum_selected_student") || sampleStudent;
@@ -112,6 +273,14 @@ const getSavedRoutines = () =>
 
 const getSavedEmotions = () =>
   localStorage.getItem("haemileum_emotions") || "[]";
+
+const getHomecomingState = () =>
+  localStorage.getItem("haemileum_homecoming_state") || null;
+
+const getPrivacyAgreed = () =>
+  typeof window !== "undefined"
+    ? localStorage.getItem("haemileum_privacy_agreed") || "false"
+    : "false";
 
 function readJsonArray<T>(value: string): T[] {
   try {
@@ -142,6 +311,34 @@ export default function ParentDashboardPage() {
     getSavedEmotions,
     () => "[]"
   );
+  const homecomingText = useSyncExternalStore(
+    subscribeToStorage,
+    getHomecomingState,
+    () => null
+  );
+  const privacyAgreedText = useSyncExternalStore(
+    subscribeToStorage,
+    getPrivacyAgreed,
+    () => "false"
+  );
+  const isPrivacyAgreed = privacyAgreedText === "true";
+
+  const returnActiveStr = useSyncExternalStore(
+    subscribeToStorage,
+    getReturnActiveStr,
+    () => "false"
+  );
+  const returnDataStr = useSyncExternalStore(
+    subscribeToStorage,
+    getReturnDataStr,
+    () => ""
+  );
+
+  const isReturnActive = returnActiveStr === "true";
+  const returnData = useMemo<ReturnData | null>(() => {
+    if (!returnDataStr) return null;
+    try { return JSON.parse(returnDataStr) as ReturnData; } catch { return null; }
+  }, [returnDataStr]);
 
   const results = useMemo(() => {
     const saved = readJsonArray<StudentResult>(resultsText).filter(
@@ -163,6 +360,17 @@ export default function ParentDashboardPage() {
     );
     return saved.length > 0 ? saved : sampleEmotions;
   }, [emotionsText, selectedStudent]);
+
+  const homecomingState = useMemo(() => {
+    try {
+      if (!homecomingText) return null;
+      const state = JSON.parse(homecomingText) as HomecomingState;
+      if (state.studentName !== selectedStudent) return null;
+      return state;
+    } catch {
+      return null;
+    }
+  }, [homecomingText, selectedStudent]);
 
   const latestResult = results[results.length - 1];
   const latestRoutine = routines[routines.length - 1];
@@ -186,8 +394,19 @@ export default function ParentDashboardPage() {
       <section className="mx-auto max-w-7xl">
         <div className="mb-6 overflow-hidden rounded-lg border border-indigo-100 bg-white shadow-sm">
           <div className="grid gap-0 lg:grid-cols-[1fr_0.86fr]">
-            <div className="bg-indigo-700 p-7 text-white sm:p-9">
-              <p className="text-sm font-bold text-indigo-100">학부모 대시보드</p>
+            <div className="bg-indigo-700 p-7 text-white sm:p-9 relative">
+              <div className="absolute top-6 right-6">
+                {isPrivacyAgreed ? (
+                  <span className="flex items-center gap-2 rounded-full bg-emerald-500/20 px-3 py-1.5 text-xs font-bold text-emerald-100 ring-1 ring-emerald-400/50 backdrop-blur-sm shadow-sm">
+                    ✅ 아동 개인정보보호 동의 완료
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2 rounded-full bg-rose-500/20 px-3 py-1.5 text-xs font-bold text-rose-100 ring-1 ring-rose-400/50 backdrop-blur-sm shadow-sm">
+                    ⚠️ 학생 앱에서 보호자 동의 필요
+                  </span>
+                )}
+              </div>
+              <p className="text-sm font-bold text-indigo-100 mt-4 sm:mt-0">학부모 대시보드</p>
               <h1 className="mt-3 text-3xl font-black leading-tight sm:text-4xl">
                 {selectedStudent} 학생의 오늘을
                 <br />
@@ -216,6 +435,60 @@ export default function ParentDashboardPage() {
           </div>
         </div>
 
+        <RoutePlannerPanel activeLocation={returnData?.location ?? null} />
+
+        {/* 안심귀가 현황 */}
+        <div className={`mb-6 overflow-hidden rounded-lg border shadow-sm ${isReturnActive && returnData?.phase === "sos" ? "border-red-300 bg-red-50" : isReturnActive ? "border-emerald-300 bg-emerald-50" : "border-slate-200 bg-white"}`}>
+          <div className="flex flex-wrap items-center justify-between gap-3 p-5 sm:p-6">
+            <div className="flex items-center gap-3">
+              <span className={`flex h-12 w-12 items-center justify-center rounded-full text-2xl ${isReturnActive && returnData?.phase === "sos" ? "bg-red-200" : isReturnActive ? "bg-emerald-200" : "bg-slate-100"}`}>
+                {isReturnActive && returnData ? (PHASE_LABELS[returnData.phase]?.icon ?? "📍") : "🏠"}
+              </span>
+              <div>
+                <p className={`text-xs font-black uppercase tracking-wider ${isReturnActive && returnData?.phase === "sos" ? "text-red-600" : isReturnActive ? "text-emerald-700" : "text-slate-500"}`}>
+                  안심귀가 현황
+                </p>
+                <p className="text-xl font-black text-slate-900">
+                  {isReturnActive && returnData
+                    ? `${returnData.studentName} · ${PHASE_LABELS[returnData.phase]?.label ?? "이동 중"}`
+                    : "귀가 기능이 꺼져 있어요"}
+                </p>
+                {isReturnActive && returnData && (
+                  <p className="mt-0.5 text-sm font-semibold text-slate-600">
+                    마지막 업데이트: {returnData.updatedAt}
+                    {returnData.busNumber && ` · ${returnData.busNumber}번 버스`}
+                    {returnData.stopsLeft !== undefined && ` · ${returnData.stopsLeft}정류장 남음`}
+                    {returnData.step && ` · ${returnData.step}`}
+                  </p>
+                )}
+              </div>
+            </div>
+            {isReturnActive && returnData && (
+              <span className={`flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-black ${returnData.phase === "sos" ? "bg-red-600 text-white" : "bg-emerald-600 text-white"}`}>
+                <span className="h-2 w-2 animate-pulse rounded-full bg-white" />
+                {returnData.phase === "sos" ? "긴급 도움 요청" : "실시간 공유 중"}
+              </span>
+            )}
+          </div>
+          {isReturnActive && returnData && returnData.phase === "sos" && (
+            <div className="border-t border-red-200 bg-red-100 px-5 py-4">
+              <p className="text-base font-black text-red-900">
+                아이가 도움을 요청했어요. 지금 바로 전화해 주세요.
+              </p>
+            </div>
+          )}
+          {isReturnActive && returnData && (
+            <ReturnLocationPanel data={returnData} />
+          )}
+          {!isReturnActive && (
+            <div className="border-t border-slate-100 bg-slate-50 px-5 py-3">
+              <p className="text-sm font-semibold text-slate-500">
+                아이가 학생 앱에서 &quot;집으로 가기&quot;를 누르면 여기에 실시간 상태가 표시돼요.
+              </p>
+            </div>
+          )}
+        </div>
+
         <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <ParentCard
             title="최근 활동"
@@ -239,6 +512,95 @@ export default function ParentDashboardPage() {
             tone="warm"
           />
         </div>
+
+        {/* 실시간 안심귀가 모니터링 섹션 */}
+        {homecomingState && (
+          <div className={`mb-6 rounded-xl border p-5 sm:p-7 shadow-sm transition-colors duration-500 ${homecomingState.isSos ? "bg-rose-50 border-rose-300" : "bg-white border-emerald-200"}`}>
+            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4 mb-5">
+              <div className="flex items-center gap-3">
+                <span className={`flex h-12 w-12 items-center justify-center rounded-full text-2xl shadow-sm ${homecomingState.isSos ? "bg-rose-200 animate-pulse" : "bg-emerald-100"}`}>
+                  {homecomingState.isSos ? "🚨" : "🛡️"}
+                </span>
+                <div>
+                  <p className={`text-sm font-bold ${homecomingState.isSos ? "text-rose-700" : "text-emerald-700"}`}>
+                    실시간 안심귀가 모니터링
+                  </p>
+                  <h2 className="text-xl font-black text-slate-950 sm:text-2xl">
+                    현재 상태: {homecomingState.status}
+                  </h2>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-xs font-bold text-slate-500">마지막 업데이트: {homecomingState.updatedAt}</p>
+                <div className="mt-1 flex items-center justify-end gap-2 text-sm font-bold text-slate-700">
+                  <span>🔋 배터리 {homecomingState.battery}%</span>
+                  <span className="relative flex h-3 w-3">
+                    <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${homecomingState.isSos ? "bg-rose-400" : "bg-emerald-400"}`}></span>
+                    <span className={`relative inline-flex rounded-full h-3 w-3 ${homecomingState.isSos ? "bg-rose-500" : "bg-emerald-500"}`}></span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="rounded-lg bg-slate-50 p-5 ring-1 ring-slate-200">
+                <p className="text-sm font-bold text-slate-700 mb-4">현재 알림 및 진행 상황</p>
+                <div className={`rounded-xl p-4 text-base font-bold leading-7 border-l-4 ${homecomingState.isSos ? "bg-rose-100 border-rose-500 text-rose-900" : "bg-emerald-50 border-emerald-500 text-emerald-900"}`}>
+                  {homecomingState.message}
+                </div>
+                
+                {/* 간소화된 진행 상태 바 */}
+                <div className="mt-6">
+                  <div className="flex justify-between text-xs font-bold text-slate-500 mb-2">
+                    <span>귀가 시작</span>
+                    <span>이동 중</span>
+                    <span>도착</span>
+                  </div>
+                  <div className="h-3 w-full bg-slate-200 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full transition-all duration-1000 ${homecomingState.isSos ? "bg-rose-500" : "bg-emerald-500"}`} 
+                      style={{ width: homecomingState.phase === 'completed' ? '100%' : homecomingState.phase === 'bus-nav' || homecomingState.phase === 'walk-nav' ? '60%' : homecomingState.phase === 'locating' || homecomingState.phase === 'mode-select' ? '20%' : '5%' }} 
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* 시뮬레이션용 지도 영역 (모의 화면) */}
+              <div className="relative h-48 sm:h-full min-h-[200px] rounded-lg bg-slate-200 overflow-hidden ring-1 ring-slate-300">
+                <div className="absolute inset-0 opacity-40" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\\"20\\" height=\\"20\\" viewBox=\\"0 0 20 20\\" xmlns=\\"http://www.w3.org/2000/svg\\"%3E%3Cg fill=\\"%239C92AC\\" fill-opacity=\\"0.4\\" fill-rule=\\"evenodd\\"%3E%3Ccircle cx=\\"3\\" cy=\\"3\\" r=\\"3\\"/>%3Ccircle cx=\\"13\\" cy=\\"13\\" r=\\"3\\"/>%3C/g%3E%3C/svg%3E")' }}></div>
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center">
+                    <span className="text-4xl">🗺️</span>
+                    <p className="mt-2 text-sm font-bold text-slate-600 bg-white/80 px-3 py-1 rounded-full backdrop-blur-sm">실시간 지도 추적 중...</p>
+                  </div>
+                </div>
+                
+                {/* 핑 (내 위치) */}
+                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
+                  <div className={`text-4xl animate-bounce drop-shadow-xl ${homecomingState.isSos ? "animate-ping" : ""}`}>
+                    {homecomingState.isSos ? "🆘" : "👧"}
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            {homecomingState.isSos && (
+              <div className="mt-5 flex gap-3">
+                <a href="tel:01000000000" className="flex-1 rounded-lg bg-rose-600 px-4 py-3 text-center text-sm font-black text-white hover:bg-rose-700 transition">
+                  아이에게 즉시 전화걸기
+                </a>
+                <button 
+                  onClick={() => {
+                    alert("가장 가까운 관할 경찰서/센터에 위치가 전송되었습니다.");
+                  }}
+                  className="rounded-lg bg-white border-2 border-rose-300 px-4 py-3 text-center text-sm font-black text-rose-800 hover:bg-rose-50 transition"
+                >
+                  관계 기관 협조 요청
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="mb-6 rounded-lg border border-indigo-100 bg-white p-5 shadow-sm sm:p-6">
           <div className="grid gap-5 lg:grid-cols-[1fr_auto] lg:items-center">
@@ -400,6 +762,319 @@ function GuideCard({ title, text }: { title: string; text: string }) {
       <p className="mt-1 text-sm font-semibold leading-6 text-slate-600">
         {text}
       </p>
+    </div>
+  );
+}
+
+function RoutePlannerPanel({ activeLocation }: { activeLocation: LocationSnapshot | null }) {
+  const initialPlan = getInitialRoutePlan();
+  const [homeAddress, setHomeAddress] = useState(initialPlan?.homeAddress ?? "");
+  const [destinationAddress, setDestinationAddress] = useState(
+    initialPlan?.destinationAddress ?? initialPlan?.homeAddress ?? ""
+  );
+  const [waypointsText, setWaypointsText] = useState(
+    initialPlan?.waypoints.join("\n") ?? ""
+  );
+  const [travelMode, setTravelMode] = useState<RoutePlan["travelMode"]>(
+    initialPlan?.travelMode ?? "walking"
+  );
+  const [note, setNote] = useState(initialPlan?.note ?? "");
+  const routePlanText = useSyncExternalStore(
+    subscribeToStorage,
+    getRoutePlanStr,
+    () => ""
+  );
+  const activePlan = useMemo(() => parseRoutePlan(routePlanText), [routePlanText]);
+
+  const handleSave = () => {
+    const trimmedHome = homeAddress.trim();
+    const trimmedDestination = destinationAddress.trim() || trimmedHome;
+
+    if (!trimmedHome || !trimmedDestination) return;
+
+    const plan: RoutePlan = {
+      homeAddress: trimmedHome,
+      destinationAddress: trimmedDestination,
+      waypoints: parseWaypoints(waypointsText),
+      travelMode,
+      note: note.trim(),
+      updatedAt: new Date().toLocaleString("ko-KR"),
+    };
+
+    localStorage.setItem(ROUTE_PLAN_KEY, JSON.stringify(plan));
+    window.dispatchEvent(new Event("storage"));
+  };
+
+  const handleClear = () => {
+    localStorage.removeItem(ROUTE_PLAN_KEY);
+    window.dispatchEvent(new Event("storage"));
+  };
+
+  return (
+    <section className="mb-6 overflow-hidden rounded-lg border border-emerald-200 bg-white shadow-sm">
+      <div className="grid gap-0 xl:grid-cols-[0.96fr_1.04fr]">
+        <div className="p-5 sm:p-6">
+          <p className="text-sm font-bold text-emerald-700">귀가 경로 설정</p>
+          <h2 className="mt-1 text-2xl font-black text-slate-950">
+            집 주소와 경유지를 저장해요
+          </h2>
+
+          <form
+            className="mt-5 grid gap-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              handleSave();
+            }}
+          >
+            <label className="grid gap-2">
+              <span className="text-sm font-black text-slate-700">학생 집 주소</span>
+              <input
+                value={homeAddress}
+                onChange={(event) => setHomeAddress(event.target.value)}
+                placeholder="예: 서울시 ○○구 ○○로 12"
+                className="min-h-12 rounded-lg border border-slate-200 bg-slate-50 px-4 text-base font-bold text-slate-900 outline-none focus:border-emerald-400 focus:bg-white"
+              />
+            </label>
+
+            <label className="grid gap-2">
+              <span className="text-sm font-black text-slate-700">도착지</span>
+              <input
+                value={destinationAddress}
+                onChange={(event) => setDestinationAddress(event.target.value)}
+                placeholder="집 주소와 같으면 비워도 돼요"
+                className="min-h-12 rounded-lg border border-slate-200 bg-slate-50 px-4 text-base font-bold text-slate-900 outline-none focus:border-emerald-400 focus:bg-white"
+              />
+            </label>
+
+            <label className="grid gap-2">
+              <span className="text-sm font-black text-slate-700">웨이포인트</span>
+              <textarea
+                value={waypointsText}
+                onChange={(event) => setWaypointsText(event.target.value)}
+                placeholder={"학교 정문\n파란 편의점\n큰 횡단보도"}
+                rows={4}
+                className="resize-none rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-base font-bold leading-6 text-slate-900 outline-none focus:border-emerald-400 focus:bg-white"
+              />
+            </label>
+
+            <div>
+              <p className="text-sm font-black text-slate-700">이동 방법</p>
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {[
+                  { id: "walking", label: "도보" },
+                  { id: "transit", label: "대중교통" },
+                  { id: "driving", label: "차량" },
+                ].map((mode) => (
+                  <button
+                    key={mode.id}
+                    type="button"
+                    onClick={() => setTravelMode(mode.id as RoutePlan["travelMode"])}
+                    className={`min-h-11 rounded-lg px-3 text-sm font-black ${
+                      travelMode === mode.id
+                        ? "bg-emerald-600 text-white"
+                        : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                    }`}
+                  >
+                    {mode.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <label className="grid gap-2">
+              <span className="text-sm font-black text-slate-700">안내 메모</span>
+              <input
+                value={note}
+                onChange={(event) => setNote(event.target.value)}
+                placeholder="예: 횡단보도에서는 초록불을 기다려요"
+                className="min-h-12 rounded-lg border border-slate-200 bg-slate-50 px-4 text-base font-bold text-slate-900 outline-none focus:border-emerald-400 focus:bg-white"
+              />
+            </label>
+
+            <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+              <button
+                type="submit"
+                className="min-h-12 rounded-lg bg-emerald-600 px-5 py-3 text-base font-black text-white hover:bg-emerald-700"
+              >
+                학생 화면에 공유
+              </button>
+              <button
+                type="button"
+                onClick={handleClear}
+                className="min-h-12 rounded-lg bg-white px-5 py-3 text-base font-black text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50"
+              >
+                공유 끄기
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <RoutePlanPreview plan={activePlan} activeLocation={activeLocation} />
+      </div>
+    </section>
+  );
+}
+
+function RoutePlanPreview({
+  plan,
+  activeLocation,
+}: {
+  plan: RoutePlan | null;
+  activeLocation: LocationSnapshot | null;
+}) {
+  if (!plan) {
+    return (
+      <div className="border-t border-emerald-100 bg-emerald-50 p-5 sm:p-6 xl:border-l xl:border-t-0">
+        <p className="text-sm font-bold text-emerald-700">공유 경로</p>
+        <h3 className="mt-1 text-2xl font-black text-slate-950">
+          아직 저장된 경로가 없어요
+        </h3>
+        <p className="mt-3 text-sm font-semibold leading-6 text-slate-600">
+          주소와 경유지를 저장하면 학생 안심귀가 화면에서 같은 경로를 볼 수 있어요.
+        </p>
+      </div>
+    );
+  }
+
+  const embedUrl = getGoogleDirectionsEmbedUrl(plan, activeLocation);
+  const directionsUrl = getGoogleDirectionsUrl(plan, activeLocation);
+  const routeItems = ["현재 위치", ...plan.waypoints, getRouteDestination(plan)];
+
+  return (
+    <div className="border-t border-emerald-100 bg-emerald-50 p-5 sm:p-6 xl:border-l xl:border-t-0">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-sm font-bold text-emerald-700">공유 경로</p>
+          <h3 className="mt-1 text-2xl font-black text-slate-950">
+            학생 화면에 공유 중
+          </h3>
+          <p className="mt-1 text-sm font-semibold text-slate-500">
+            마지막 저장: {plan.updatedAt}
+          </p>
+        </div>
+        <a
+          href={directionsUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex min-h-10 items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-black text-white hover:bg-emerald-700"
+        >
+          Google 지도 열기
+        </a>
+      </div>
+
+      <div className="mt-4 grid gap-2">
+        {routeItems.map((item, index) => (
+          <div
+            key={`${item}-${index}`}
+            className="flex items-center gap-3 rounded-lg bg-white px-4 py-3 ring-1 ring-emerald-100"
+          >
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-sm font-black text-emerald-800">
+              {index + 1}
+            </span>
+            <p className="min-w-0 break-words text-sm font-black text-slate-800">
+              {item}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {plan.note && (
+        <p className="mt-4 rounded-lg bg-amber-50 px-4 py-3 text-sm font-bold leading-6 text-amber-900 ring-1 ring-amber-100">
+          {plan.note}
+        </p>
+      )}
+
+      {embedUrl && (
+        <div className="mt-4 h-64 overflow-hidden rounded-lg border border-emerald-200 bg-white">
+          <iframe
+            title="보호자 설정 Google 길찾기"
+            src={embedUrl}
+            className="h-full w-full border-0"
+            loading="lazy"
+            referrerPolicy="no-referrer-when-downgrade"
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ReturnLocationPanel({ data }: { data: ReturnData }) {
+  const location = data.location;
+
+  if (!location) {
+    return (
+      <div className="border-t border-slate-100 bg-slate-50 px-5 py-4">
+        <p className="text-sm font-black text-slate-700">지도 위치를 기다리는 중이에요.</p>
+        <p className="mt-1 text-sm font-semibold text-slate-500">
+          아이 화면에서 위치 권한이 허용되면 Google 지도가 여기에 표시돼요.
+        </p>
+      </div>
+    );
+  }
+
+  const mapUrl = data.mapUrl || getMapUrl(location);
+  const mapEmbedUrl = getMapEmbedUrl(location);
+  const isActualGps = location.source === "gps";
+  const issueTitle =
+    location.issue === "insecure"
+      ? "HTTPS 접속이 아니라 실제 위치 미수신"
+      : location.issue === "denied"
+      ? "학생 기기에서 위치 권한 거부됨"
+      : location.issue === "unsupported"
+      ? "학생 브라우저 위치 기능 미지원"
+      : location.issue
+      ? "학생 위치 신호 대기 중"
+      : "연습 위치 표시 중";
+
+  return (
+    <div className="border-t border-emerald-100 bg-white px-5 py-5">
+      <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
+        {mapEmbedUrl ? (
+          <div className="h-56 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
+            <iframe
+              title={`${data.studentName} 현재 위치 Google 지도`}
+              src={mapEmbedUrl}
+              className="h-full w-full border-0"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          </div>
+        ) : (
+          <div className="flex h-56 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 px-5 text-center text-sm font-bold leading-6 text-slate-500">
+            Google Maps API 키가 설정되면 지도가 표시돼요.
+          </div>
+        )}
+
+        <div className="rounded-lg bg-emerald-50 p-4 ring-1 ring-emerald-100">
+          <p className="text-xs font-black uppercase tracking-wider text-emerald-700">
+            Google Maps 위치 공유
+          </p>
+          <h3 className="mt-1 text-xl font-black text-slate-950">
+            {isActualGps ? "실제 위치 수신 중" : issueTitle}
+          </h3>
+          <div className="mt-4 grid gap-2 text-sm font-bold leading-6 text-slate-700">
+            <p>이동 방법: {getMethodLabel(data.method)}</p>
+            <p>좌표: {location.latitude.toFixed(5)}, {location.longitude.toFixed(5)}</p>
+            {location.accuracy && <p>정확도: 약 {location.accuracy}m</p>}
+            <p>수신 시간: {data.updatedAt}</p>
+            {location.note && <p className="rounded-lg bg-amber-50 px-3 py-2 text-amber-800 ring-1 ring-amber-100">{location.note}</p>}
+            {location.issue === "insecure" && (
+              <p className="rounded-lg bg-slate-50 px-3 py-2 text-slate-700 ring-1 ring-slate-200">
+                학생 화면이 HTTP IP 주소로 열려 있어 브라우저가 GPS를 차단했습니다. HTTPS 주소로 접속해야 실제 위치가 부모 화면에 올라옵니다.
+              </p>
+            )}
+          </div>
+          <a
+            href={mapUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-black text-white hover:bg-emerald-700"
+          >
+            Google 지도에서 보기
+          </a>
+        </div>
+      </div>
     </div>
   );
 }

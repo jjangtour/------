@@ -1,712 +1,921 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
-import { type PointerEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type MouseEvent,
+  type PointerEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
+type CharacterKey = "boy" | "girl";
 type Direction = "up" | "down" | "left" | "right";
-type Terrain = "grass" | "road" | "plaza" | "parking" | "water";
-type PoiStatus = "ready" | "planned";
+type PlaceKey = "kiosk" | "bus" | "parking" | "atm" | "safety" | "school" | "rest";
+type TileKind = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
 
 type Point = {
   x: number;
   y: number;
 };
 
-type Poi = {
-  id: string;
-  title: string;
-  subtitle: string;
-  label: string;
-  status: PoiStatus;
-  href?: string;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  entry: Point;
-  color: string;
+type TileCoord = {
+  col: number;
+  row: number;
 };
 
-const TILE_SIZE = 44;
-const MAP_COLS = 26;
-const MAP_ROWS = 18;
+type PlaceConfig = {
+  name: string;
+  icon: string;
+  href: string;
+  color: string;
+  accent: string;
+  labelLines: string[];
+  tiles: TileCoord[];
+};
 
-const readyPois: Poi[] = [
-  {
-    id: "fastfood",
-    title: "패스트푸드",
-    subtitle: "키오스크 주문 미션",
-    label: "FAST",
-    status: "ready",
+const characterConfig: Record<CharacterKey, { name: string; image: string; alt: string }> = {
+  boy: {
+    name: "도윤",
+    image: "/assets/helper/boy_full.png",
+    alt: "도윤 캐릭터",
+  },
+  girl: {
+    name: "하늘",
+    image: "/assets/helper/girl_full.png",
+    alt: "하늘 캐릭터",
+  },
+};
+
+const GRID_COLS = 18;
+const GRID_ROWS = 13;
+const TILE_SIZE = 48;
+const MOVE_SPEED = 2.9;
+
+const TILE = {
+  grass: 0,
+  path: 1,
+  bus: 2,
+  kiosk: 3,
+  school: 4,
+  atm: 5,
+  water: 6,
+  parking: 7,
+  safety: 8,
+  rest: 9,
+} as const;
+
+const tileBlock = (cols: number[], rows: number[]) =>
+  rows.flatMap((row) => cols.map((col) => ({ col, row })));
+
+const PLACES: Record<PlaceKey, PlaceConfig> = {
+  kiosk: {
+    name: "패스트푸드",
+    icon: "🍔",
     href: "/simulation/kiosk",
-    x: 2,
-    y: 2,
-    w: 3,
-    h: 2,
-    entry: { x: 3, y: 4 },
-    color: "#f59e0b",
+    color: "#ef5a3c",
+    accent: "#fff0db",
+    labelLines: ["패스트", "푸드"],
+    tiles: tileBlock([14, 15], [1, 2]),
   },
-  {
-    id: "bus",
-    title: "버스정류장",
-    subtitle: "버스 타기 미션",
-    label: "BUS",
-    status: "ready",
+  bus: {
+    name: "버스정류장",
+    icon: "🚌",
     href: "/simulation/bus",
-    x: 8,
-    y: 1,
-    w: 3,
-    h: 2,
-    entry: { x: 9, y: 3 },
-    color: "#38bdf8",
+    color: "#0f87a8",
+    accent: "#d9f6ff",
+    labelLines: ["버스", "정류장"],
+    tiles: tileBlock([1, 2], [1, 2]),
   },
-  {
-    id: "parking",
-    title: "주차정산",
-    subtitle: "주차장 정산 미션",
-    label: "PARK",
-    status: "ready",
+  parking: {
+    name: "주차정산",
+    icon: "🅿️",
     href: "/simulation/parking",
-    x: 14,
-    y: 1,
-    w: 5,
-    h: 4,
-    entry: { x: 16, y: 6 },
-    color: "#94a3b8",
+    color: "#5b6f85",
+    accent: "#eef4fb",
+    labelLines: ["주차", "정산"],
+    tiles: tileBlock([7, 8], [1, 2]),
   },
-  {
-    id: "atm",
-    title: "은행 ATM",
-    subtitle: "ATM 사용 미션",
-    label: "ATM",
-    status: "ready",
+  atm: {
+    name: "은행 ATM",
+    icon: "🏧",
     href: "/simulation/atm",
-    x: 21,
-    y: 2,
-    w: 3,
-    h: 2,
-    entry: { x: 22, y: 4 },
-    color: "#60a5fa",
-  },
-  {
-    id: "safety",
-    title: "안전훈련장",
-    subtitle: "사기 방어와 마음 관리",
-    label: "SAFE",
-    status: "ready",
-    href: "/simulation/safety-sos",
-    x: 2,
-    y: 8,
-    w: 3,
-    h: 2,
-    entry: { x: 3, y: 10 },
-    color: "#2dd4bf",
-  },
-  {
-    id: "school",
-    title: "학교",
-    subtitle: "학교생활 대화 미션",
-    label: "SCH",
-    status: "ready",
-    href: "/simulation/school-talk",
-    x: 8,
-    y: 8,
-    w: 4,
-    h: 3,
-    entry: { x: 10, y: 11 },
-    color: "#a78bfa",
-  },
-  {
-    id: "rest",
-    title: "마음쉼터",
-    subtitle: "마음 기록",
-    label: "REST",
-    status: "ready",
-    href: "/emotion/check",
-    x: 21,
-    y: 8,
-    w: 3,
-    h: 2,
-    entry: { x: 22, y: 10 },
-    color: "#fb7185",
-  },
-];
-
-const plannedPois: Poi[] = [
-  {
-    id: "cafe",
-    title: "카페",
-    subtitle: "준비 중",
-    label: "CAFE",
-    status: "planned",
-    x: 2,
-    y: 13,
-    w: 3,
-    h: 2,
-    entry: { x: 3, y: 12 },
-    color: "#b45309",
-  },
-  {
-    id: "foodcourt",
-    title: "푸드코트",
-    subtitle: "준비 중",
-    label: "FOOD",
-    status: "planned",
-    x: 6,
-    y: 13,
-    w: 3,
-    h: 2,
-    entry: { x: 7, y: 12 },
-    color: "#f97316",
-  },
-  {
-    id: "table-order",
-    title: "테이블 오더 식당",
-    subtitle: "준비 중",
-    label: "ORDER",
-    status: "planned",
-    x: 10,
-    y: 13,
-    w: 3,
-    h: 2,
-    entry: { x: 11, y: 12 },
-    color: "#ef4444",
-  },
-  {
-    id: "catchtable",
-    title: "캐치테이블 식당",
-    subtitle: "준비 중",
-    label: "CATCH",
-    status: "planned",
-    x: 14,
-    y: 13,
-    w: 3,
-    h: 2,
-    entry: { x: 15, y: 12 },
-    color: "#dc2626",
-  },
-  {
-    id: "expressbus",
-    title: "고속버스 터미널",
-    subtitle: "준비 중",
-    label: "EXP",
-    status: "planned",
-    x: 18,
-    y: 13,
-    w: 3,
-    h: 2,
-    entry: { x: 19, y: 12 },
-    color: "#0284c7",
-  },
-  {
-    id: "ktx",
-    title: "KTX역",
-    subtitle: "준비 중",
-    label: "KTX",
-    status: "planned",
-    x: 22,
-    y: 13,
-    w: 3,
-    h: 2,
-    entry: { x: 23, y: 12 },
     color: "#2563eb",
+    accent: "#dceafe",
+    labelLines: ["은행", "ATM"],
+    tiles: tileBlock([4, 5], [9, 10]),
   },
-  {
-    id: "airport",
-    title: "공항",
-    subtitle: "준비 중",
-    label: "AIR",
-    status: "planned",
-    x: 2,
-    y: 16,
-    w: 3,
-    h: 1,
-    entry: { x: 3, y: 15 },
-    color: "#0ea5e9",
+  safety: {
+    name: "안전훈련장",
+    icon: "🚨",
+    href: "/simulation/safety-sos",
+    color: "#dc2626",
+    accent: "#ffe2df",
+    labelLines: ["안전", "훈련장"],
+    tiles: tileBlock([1, 2], [4, 5]),
   },
-  {
-    id: "hospital",
-    title: "병원",
-    subtitle: "준비 중",
-    label: "HOSP",
-    status: "planned",
-    x: 6,
-    y: 16,
-    w: 3,
-    h: 1,
-    entry: { x: 7, y: 15 },
+  school: {
+    name: "학교",
+    icon: "🏫",
+    href: "/simulation/school-talk",
+    color: "#7c3aed",
+    accent: "#efe7ff",
+    labelLines: ["학교"],
+    tiles: tileBlock([10, 11], [9, 10]),
+  },
+  rest: {
+    name: "마음쉼터",
+    icon: "💚",
+    href: "/emotion/check",
     color: "#16a34a",
+    accent: "#ddfbe6",
+    labelLines: ["마음", "쉼터"],
+    tiles: tileBlock([15, 16], [9, 10]),
   },
-  {
-    id: "admin",
-    title: "행정복지센터",
-    subtitle: "준비 중",
-    label: "ADMIN",
-    status: "planned",
-    x: 10,
-    y: 16,
-    w: 3,
-    h: 1,
-    entry: { x: 11, y: 15 },
-    color: "#64748b",
-  },
-  {
-    id: "convenience",
-    title: "편의점(택배)",
-    subtitle: "준비 중",
-    label: "CVS",
-    status: "planned",
-    x: 14,
-    y: 16,
-    w: 3,
-    h: 1,
-    entry: { x: 15, y: 15 },
-    color: "#22c55e",
-  },
-  {
-    id: "gas",
-    title: "셀프주유소",
-    subtitle: "준비 중",
-    label: "GAS",
-    status: "planned",
-    x: 18,
-    y: 16,
-    w: 3,
-    h: 1,
-    entry: { x: 19, y: 15 },
-    color: "#eab308",
-  },
-  {
-    id: "bath",
-    title: "목욕탕",
-    subtitle: "준비 중",
-    label: "BATH",
-    status: "planned",
-    x: 22,
-    y: 16,
-    w: 3,
-    h: 1,
-    entry: { x: 23, y: 15 },
-    color: "#06b6d4",
-  },
+};
+
+const PLACE_ORDER: PlaceKey[] = ["kiosk", "bus", "parking", "atm", "safety", "school", "rest"];
+
+const MAP_GRID: TileKind[][] = [
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 2, 2, 1, 0, 0, 0, 7, 7, 1, 0, 0, 0, 1, 3, 3, 0, 0],
+  [0, 2, 2, 1, 0, 0, 0, 7, 7, 1, 0, 0, 0, 1, 3, 3, 0, 0],
+  [0, 0, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0],
+  [0, 8, 8, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0],
+  [0, 8, 8, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+  [0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+  [0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0],
+  [6, 6, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 0],
+  [6, 6, 0, 1, 5, 5, 0, 0, 0, 1, 4, 4, 0, 0, 0, 9, 9, 0],
+  [0, 0, 0, 1, 5, 5, 0, 0, 0, 1, 4, 4, 0, 0, 0, 9, 9, 0],
+  [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+  [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 ];
 
-const pois = [...readyPois, ...plannedPois];
-const poiByEntry = new Map(pois.map((poi) => [`${poi.entry.x},${poi.entry.y}`, poi]));
-const buildingCells = new Set<string>();
-const accessPocketCells = new Set([
-  "3,4",
-  "9,3",
-  "9,4",
-  "16,6",
-  "22,4",
-  "3,10",
-  "10,11",
-  "21,10",
-  "22,10",
+const WALKABLE_TILES = new Set<TileKind>([
+  TILE.path,
+  TILE.bus,
+  TILE.kiosk,
+  TILE.school,
+  TILE.atm,
+  TILE.parking,
+  TILE.safety,
+  TILE.rest,
 ]);
-pois.forEach((poi) => {
-  for (let y = poi.y; y < poi.y + poi.h; y += 1) {
-    for (let x = poi.x; x < poi.x + poi.w; x += 1) {
-      buildingCells.add(`${x},${y}`);
-    }
+
+const TILE_TO_PLACE: Partial<Record<TileKind, PlaceKey>> = {
+  [TILE.bus]: "bus",
+  [TILE.kiosk]: "kiosk",
+  [TILE.school]: "school",
+  [TILE.atm]: "atm",
+  [TILE.parking]: "parking",
+  [TILE.safety]: "safety",
+  [TILE.rest]: "rest",
+};
+
+const DIRECTION_VECTOR: Record<Direction, Point> = {
+  up: { x: 0, y: -1 },
+  down: { x: 0, y: 1 },
+  left: { x: -1, y: 0 },
+  right: { x: 1, y: 0 },
+};
+
+const MOVE_KEY_IDS = new Set([
+  "arrowup",
+  "arrowdown",
+  "arrowleft",
+  "arrowright",
+  "w",
+  "a",
+  "s",
+  "d",
+  "keyw",
+  "keya",
+  "keys",
+  "keyd",
+  "8",
+  "2",
+  "4",
+  "6",
+  "numpad8",
+  "numpad2",
+  "numpad4",
+  "numpad6",
+]);
+
+const INITIAL_POSITION = {
+  x: 8 * TILE_SIZE + TILE_SIZE / 2,
+  y: 6 * TILE_SIZE + TILE_SIZE / 2,
+};
+
+const getInitialStudentProfile = () => {
+  if (typeof window === "undefined") {
+    return { character: "boy" as CharacterKey, studentName: "도윤" };
   }
+
+  const savedStudent = localStorage.getItem("haemileum_selected_student");
+  if (savedStudent === "김하늘" || savedStudent === "하늘") {
+    return { character: "girl" as CharacterKey, studentName: "김하늘" };
+  }
+
+  if (savedStudent === "이도윤" || savedStudent === "도윤") {
+    return { character: "boy" as CharacterKey, studentName: "이도윤" };
+  }
+
+  return { character: "boy" as CharacterKey, studentName: "도윤" };
+};
+
+const tileCenter = (tile: TileCoord): Point => ({
+  x: tile.col * TILE_SIZE + TILE_SIZE / 2,
+  y: tile.row * TILE_SIZE + TILE_SIZE / 2,
 });
 
-const readSelectedStudent = () => {
-  if (typeof window === "undefined") return "도윤";
-  return localStorage.getItem("haemileum_selected_student") || "도윤";
+const tileKey = (tile: TileCoord) => `${tile.col}:${tile.row}`;
+
+const getTileKind = (col: number, row: number): TileKind | null => {
+  if (row < 0 || row >= GRID_ROWS || col < 0 || col >= GRID_COLS) return null;
+  return MAP_GRID[row][col];
 };
 
-const getCharacterImage = (studentName: string) =>
-  studentName.includes("하늘") || studentName.toLowerCase().includes("girl")
-    ? "/assets/helper/girl_full.png"
-    : "/assets/helper/boy_full.png";
+const getTileFromPosition = (position: Point): TileCoord => ({
+  col: Math.floor(position.x / TILE_SIZE),
+  row: Math.floor(position.y / TILE_SIZE),
+});
 
-const getTerrain = (x: number, y: number): Terrain => {
-  if (x < 0 || y < 0 || x >= MAP_COLS || y >= MAP_ROWS) return "grass";
-  if (accessPocketCells.has(`${x},${y}`)) return "plaza";
-  if (y === 5 || y === 12 || y === 15 || x === 5 || x === 13 || x === 20) return "road";
-  if ((x >= 14 && x <= 18 && y >= 1 && y <= 5) || (x >= 15 && x <= 18 && y === 6)) {
-    return "parking";
-  }
-  if ((x >= 11 && x <= 15 && y >= 7 && y <= 10) || (x >= 1 && x <= 4 && y >= 10 && y <= 11)) {
-    return "plaza";
-  }
-  if (x >= 23 && y >= 5 && y <= 10) return "water";
-  return "grass";
+const isWalkableTile = (tile: TileCoord) => {
+  const tileKind = getTileKind(tile.col, tile.row);
+  return tileKind !== null && WALKABLE_TILES.has(tileKind);
 };
 
-const getTerrainColor = (terrain: Terrain) => {
-  switch (terrain) {
-    case "road":
-      return "#d9ad74";
-    case "plaza":
-      return "#d6d3d1";
-    case "parking":
-      return "#cbd5e1";
-    case "water":
-      return "#93c5fd";
-    default:
-      return "#79b96a";
-  }
+const getPlaceFromTile = (tile: TileCoord): PlaceKey | null => {
+  const tileKind = getTileKind(tile.col, tile.row);
+  return tileKind === null ? null : TILE_TO_PLACE[tileKind] ?? null;
 };
 
-const isWalkable = (point: Point) => {
-  const key = `${point.x},${point.y}`;
-  const terrain = getTerrain(point.x, point.y);
-  return (
-    point.x >= 0 &&
-    point.y >= 0 &&
-    point.x < MAP_COLS &&
-    point.y < MAP_ROWS &&
-    !buildingCells.has(key) &&
-    terrain !== "grass" &&
-    terrain !== "water"
-  );
+const findNearestWalkableTile = (startCol: number, startRow: number): TileCoord | null => {
+  const start = { col: startCol, row: startRow };
+  if (isWalkableTile(start)) return start;
+
+  for (let radius = 1; radius <= Math.max(GRID_COLS, GRID_ROWS); radius++) {
+    let nearest: TileCoord | null = null;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+
+    for (let row = startRow - radius; row <= startRow + radius; row++) {
+      for (let col = startCol - radius; col <= startCol + radius; col++) {
+        if (Math.abs(col - startCol) !== radius && Math.abs(row - startRow) !== radius) {
+          continue;
+        }
+
+        const candidate = { col, row };
+        if (!isWalkableTile(candidate)) continue;
+
+        const distance = Math.abs(col - startCol) + Math.abs(row - startRow);
+        if (distance < nearestDistance) {
+          nearest = candidate;
+          nearestDistance = distance;
+        }
+      }
+    }
+
+    if (nearest) return nearest;
+  }
+
+  return null;
+};
+
+const findPath = (start: TileCoord, goal: TileCoord): TileCoord[] | null => {
+  if (!isWalkableTile(start) || !isWalkableTile(goal)) return null;
+
+  const startKey = tileKey(start);
+  const goalKey = tileKey(goal);
+  const queue: TileCoord[] = [start];
+  const visited = new Set([startKey]);
+  const cameFrom = new Map<string, string | null>([[startKey, null]]);
+  const coords = new Map<string, TileCoord>([[startKey, start]]);
+
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (!current) break;
+
+    if (tileKey(current) === goalKey) {
+      const path: TileCoord[] = [];
+      let currentKey: string | null = goalKey;
+
+      while (currentKey && currentKey !== startKey) {
+        const coord = coords.get(currentKey);
+        if (!coord) return null;
+        path.unshift(coord);
+        currentKey = cameFrom.get(currentKey) ?? null;
+      }
+
+      return path;
+    }
+
+    const neighbors = [
+      { col: current.col + 1, row: current.row },
+      { col: current.col - 1, row: current.row },
+      { col: current.col, row: current.row + 1 },
+      { col: current.col, row: current.row - 1 },
+    ];
+
+    for (const neighbor of neighbors) {
+      const neighborKey = tileKey(neighbor);
+      if (visited.has(neighborKey) || !isWalkableTile(neighbor)) continue;
+
+      visited.add(neighborKey);
+      cameFrom.set(neighborKey, tileKey(current));
+      coords.set(neighborKey, neighbor);
+      queue.push(neighbor);
+    }
+  }
+
+  return null;
+};
+
+const findBestPathToPlace = (start: TileCoord, placeKey: PlaceKey): Point[] | null => {
+  let bestPath: TileCoord[] | null = null;
+
+  for (const tile of PLACES[placeKey].tiles) {
+    const path = findPath(start, tile);
+    if (!path) continue;
+
+    if (!bestPath || path.length < bestPath.length) {
+      bestPath = path;
+    }
+  }
+
+  return bestPath?.map(tileCenter) ?? null;
+};
+
+const drawRoundedRect = (
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  radius: number
+) => {
+  ctx.beginPath();
+  ctx.roundRect(x, y, width, height, radius);
+  ctx.fill();
+};
+
+const getPlaceBounds = (tiles: TileCoord[]) => {
+  const cols = tiles.map((tile) => tile.col);
+  const rows = tiles.map((tile) => tile.row);
+
+  return {
+    minCol: Math.min(...cols),
+    maxCol: Math.max(...cols),
+    minRow: Math.min(...rows),
+    maxRow: Math.max(...rows),
+  };
+};
+
+const getMoveResult = (position: Point, dx: number, dy: number) => {
+  const nextPosition = { x: position.x + dx, y: position.y + dy };
+  const nextTile = getTileFromPosition(nextPosition);
+
+  if (!isWalkableTile(nextTile)) {
+    return { blocked: true, position };
+  }
+
+  const placeKey = getPlaceFromTile(nextTile);
+  if (placeKey) {
+    return { blocked: false, position, placeKey };
+  }
+
+  return { blocked: false, position: nextPosition };
 };
 
 export default function TownSimulationPage() {
   const router = useRouter();
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   const playerImageRef = useRef<HTMLImageElement | null>(null);
-  const routingRef = useRef(false);
-  const [studentName] = useState(() => readSelectedStudent());
-  const [player, setPlayer] = useState<Point>({ x: 12, y: 10 });
-  const [message, setMessage] = useState("어디로 갈까요? 개발된 미션 입구나 준비 중인 장소를 찾아요.");
-  const [nearPoi, setNearPoi] = useState<Poi | null>(null);
+  const playerPositionRef = useRef<Point>(INITIAL_POSITION);
+  const activeKeys = useRef<Record<string, boolean>>({});
+  const heldDirection = useRef<Direction | null>(null);
+  const pathQueue = useRef<Point[]>([]);
+  const transitionRef = useRef<PlaceKey | null>(null);
+  const walkingRef = useRef(false);
+  const activePlaceTargetRef = useRef<PlaceKey | null>(null);
 
-  const characterImage = useMemo(() => getCharacterImage(studentName), [studentName]);
+  const [{ character, studentName }] = useState(getInitialStudentProfile);
+  const [playerPosition, setPlayerPosition] = useState<Point>(INITIAL_POSITION);
+  const [transitioning, setTransitioning] = useState<PlaceKey | null>(null);
+  const [hoveredPlace, setHoveredPlace] = useState<PlaceKey | null>(null);
+  const [activePlaceTarget, setActivePlaceTarget] = useState<PlaceKey | null>(null);
+  const [wobble, setWobble] = useState(0);
+  const [isWalking, setIsWalking] = useState(false);
+  const [playerImageReady, setPlayerImageReady] = useState(false);
 
-  const drawMap = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
+  const setActivePlace = useCallback((placeKey: PlaceKey | null) => {
+    if (activePlaceTargetRef.current === placeKey) return;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    activePlaceTargetRef.current = placeKey;
+    setActivePlaceTarget(placeKey);
+  }, []);
 
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const setWalkingState = useCallback((walking: boolean) => {
+    if (walkingRef.current === walking) return;
 
-    for (let y = 0; y < MAP_ROWS; y += 1) {
-      for (let x = 0; x < MAP_COLS; x += 1) {
-        const terrain = getTerrain(x, y);
-        const left = x * TILE_SIZE;
-        const top = y * TILE_SIZE;
+    walkingRef.current = walking;
+    setIsWalking(walking);
+    if (!walking) setWobble(0);
+  }, []);
 
-        ctx.fillStyle = getTerrainColor(terrain);
-        ctx.fillRect(left, top, TILE_SIZE, TILE_SIZE);
+  const commitPlayerPosition = useCallback((position: Point) => {
+    playerPositionRef.current = position;
+    setPlayerPosition(position);
+  }, []);
 
-        if (terrain === "road") {
-          ctx.fillStyle = "rgba(255,255,255,0.12)";
-          ctx.fillRect(left + 8, top + TILE_SIZE / 2 - 2, TILE_SIZE - 16, 4);
-        }
+  const handleTriggerEnter = useCallback(
+    (placeKey: PlaceKey) => {
+      if (transitionRef.current) return;
 
-        if (terrain === "parking") {
-          ctx.strokeStyle = "rgba(51,65,85,0.35)";
-          ctx.strokeRect(left + 6, top + 8, TILE_SIZE - 12, TILE_SIZE - 16);
-        }
+      transitionRef.current = placeKey;
+      activeKeys.current = {};
+      heldDirection.current = null;
+      pathQueue.current = [];
 
-        if (terrain === "grass") {
-          ctx.fillStyle = "rgba(21,128,61,0.18)";
-          ctx.beginPath();
-          ctx.arc(left + 12, top + 12, 5, 0, Math.PI * 2);
-          ctx.arc(left + 31, top + 29, 4, 0, Math.PI * 2);
-          ctx.fill();
-        }
+      setTransitioning(placeKey);
+      setActivePlace(null);
+      setWalkingState(false);
 
-        ctx.strokeStyle = "rgba(255,255,255,0.13)";
-        ctx.strokeRect(left, top, TILE_SIZE, TILE_SIZE);
-      }
-    }
+      window.setTimeout(() => {
+        router.push(PLACES[placeKey].href);
+      }, 700);
+    },
+    [router, setActivePlace, setWalkingState]
+  );
 
-    pois.forEach((poi) => {
-      const left = poi.x * TILE_SIZE;
-      const top = poi.y * TILE_SIZE;
-      const width = poi.w * TILE_SIZE;
-      const height = poi.h * TILE_SIZE;
-      const isReady = poi.status === "ready";
-      const isNear = nearPoi?.id === poi.id;
+  const startPath = useCallback(
+    (path: Point[] | null, placeKey: PlaceKey | null = null) => {
+      if (!path || path.length === 0 || transitionRef.current) return;
 
-      ctx.fillStyle = poi.color;
-      ctx.fillRect(left + 3, top + 3, width - 6, height - 6);
-      ctx.fillStyle = "rgba(255,255,255,0.24)";
-      ctx.fillRect(left + 8, top + 8, width - 16, 12);
+      pathQueue.current = path;
+      heldDirection.current = null;
+      setActivePlace(placeKey);
+      setWalkingState(true);
+    },
+    [setActivePlace, setWalkingState]
+  );
 
-      ctx.strokeStyle = isNear ? "#fef3c7" : isReady ? "#0f172a" : "#64748b";
-      ctx.lineWidth = isNear ? 4 : 2;
-      ctx.strokeRect(left + 3, top + 3, width - 6, height - 6);
-      ctx.lineWidth = 1;
+  const walkToPlace = useCallback(
+    (placeKey: PlaceKey) => {
+      const startTile = getTileFromPosition(playerPositionRef.current);
+      const path = findBestPathToPlace(startTile, placeKey);
 
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "900 11px Arial";
-      ctx.textAlign = "center";
-      ctx.fillText(poi.label, left + width / 2, top + height / 2 + 4);
-
-      const entryLeft = poi.entry.x * TILE_SIZE;
-      const entryTop = poi.entry.y * TILE_SIZE;
-      ctx.fillStyle = isReady ? "#22c55e" : "#facc15";
-      ctx.fillRect(entryLeft + 13, entryTop + 13, TILE_SIZE - 26, TILE_SIZE - 26);
-      ctx.strokeStyle = "#ffffff";
-      ctx.strokeRect(entryLeft + 13, entryTop + 13, TILE_SIZE - 26, TILE_SIZE - 26);
-    });
-
-    const image = playerImageRef.current;
-    const playerLeft = player.x * TILE_SIZE + 6;
-    const playerTop = player.y * TILE_SIZE + 2;
-
-    ctx.fillStyle = "rgba(15,23,42,0.24)";
-    ctx.beginPath();
-    ctx.ellipse(
-      player.x * TILE_SIZE + TILE_SIZE / 2,
-      player.y * TILE_SIZE + 38,
-      16,
-      6,
-      0,
-      0,
-      Math.PI * 2
-    );
-    ctx.fill();
-
-    if (image?.complete) {
-      ctx.drawImage(image, playerLeft, playerTop, 34, 40);
-    } else {
-      ctx.fillStyle = "#2563eb";
-      ctx.beginPath();
-      ctx.arc(player.x * TILE_SIZE + TILE_SIZE / 2, player.y * TILE_SIZE + 22, 15, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    ctx.fillStyle = "#0f172a";
-    ctx.font = "900 11px Arial";
-    ctx.textAlign = "center";
-    ctx.fillText(studentName, player.x * TILE_SIZE + TILE_SIZE / 2, player.y * TILE_SIZE - 4);
-  }, [nearPoi, player, studentName]);
-
-  useEffect(() => {
-    const image = new window.Image();
-    image.src = characterImage;
-    image.onload = drawMap;
-    playerImageRef.current = image;
-  }, [characterImage, drawMap]);
-
-  useEffect(() => {
-    drawMap();
-  }, [drawMap]);
-
-  const updateLocationMessage = useCallback(
-    (next: Point) => {
-      const entryPoi = poiByEntry.get(`${next.x},${next.y}`);
-      if (entryPoi) {
-        setNearPoi(entryPoi);
-        const href = entryPoi.href;
-        if (entryPoi.status === "ready" && href) {
-          setMessage(`${entryPoi.title}에 도착했어요. ${entryPoi.subtitle}으로 이동합니다.`);
-          routingRef.current = true;
-          window.setTimeout(() => router.push(href), 520);
-          return;
-        }
-
-        setMessage(`${entryPoi.title}은 아직 미션을 개발 중이에요. 지도에는 위치만 표시했어요.`);
+      if (!path) {
+        handleTriggerEnter(placeKey);
         return;
       }
 
-      const nearby = pois.find(
-        (poi) =>
-          Math.abs(poi.entry.x - next.x) + Math.abs(poi.entry.y - next.y) === 1
-      );
-
-      setNearPoi(nearby ?? null);
-      setMessage(
-        nearby
-          ? `${nearby.title} 입구가 가까워요. 한 칸 더 이동해요.`
-          : "어디로 갈까요? 초록 입구는 개발 완료, 노란 입구는 준비 중이에요."
-      );
+      startPath(path, placeKey);
     },
-    [router]
+    [handleTriggerEnter, startPath]
   );
 
-  const movePlayer = useCallback(
-    (direction: Direction) => {
-      if (routingRef.current) return;
+  useEffect(() => {
+    const playerImg = new window.Image();
+    playerImageRef.current = playerImg;
+    playerImg.src = characterConfig[character].image;
+    playerImg.onload = () => setPlayerImageReady(true);
 
-      const deltas: Record<Direction, Point> = {
-        up: { x: 0, y: -1 },
-        down: { x: 0, y: 1 },
-        left: { x: -1, y: 0 },
-        right: { x: 1, y: 0 },
-      };
-
-      const delta = deltas[direction];
-      const next = { x: player.x + delta.x, y: player.y + delta.y };
-
-      if (!isWalkable(next)) {
-        setMessage("그쪽은 지나갈 수 없어요. 길, 광장, 주차장 통로를 따라 움직여요.");
-        return;
-      }
-
-      setPlayer(next);
-      updateLocationMessage(next);
-    },
-    [player, updateLocationMessage]
-  );
+    return () => {
+      playerImg.onload = null;
+    };
+  }, [character]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      const keyMap: Record<string, Direction> = {
-        ArrowUp: "up",
-        w: "up",
-        W: "up",
-        ArrowDown: "down",
-        s: "down",
-        S: "down",
-        ArrowLeft: "left",
-        a: "left",
-        A: "left",
-        ArrowRight: "right",
-        d: "right",
-        D: "right",
-      };
+      const key = event.key.toLowerCase();
+      const code = event.code.toLowerCase();
+      if (!MOVE_KEY_IDS.has(key) && !MOVE_KEY_IDS.has(code)) return;
 
-      const direction = keyMap[event.key];
-      if (!direction) return;
       event.preventDefault();
-      movePlayer(direction);
+      activeKeys.current[key] = true;
+      activeKeys.current[code] = true;
+      pathQueue.current = [];
+      setActivePlace(null);
+      setWalkingState(true);
+    };
+
+    const handleKeyUp = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
+      const code = event.code.toLowerCase();
+      if (!MOVE_KEY_IDS.has(key) && !MOVE_KEY_IDS.has(code)) return;
+
+      event.preventDefault();
+      activeKeys.current[key] = false;
+      activeKeys.current[code] = false;
     };
 
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [movePlayer]);
+    window.addEventListener("keyup", handleKeyUp);
 
-  const handleCanvasPointer = useCallback(
-    (event: PointerEvent<HTMLCanvasElement>) => {
-      const canvas = canvasRef.current;
-      if (!canvas) return;
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+    };
+  }, [setActivePlace, setWalkingState]);
 
-      const rect = canvas.getBoundingClientRect();
-      const clickX = ((event.clientX - rect.left) / rect.width) * canvas.width;
-      const clickY = ((event.clientY - rect.top) / rect.height) * canvas.height;
-      const playerCenterX = player.x * TILE_SIZE + TILE_SIZE / 2;
-      const playerCenterY = player.y * TILE_SIZE + TILE_SIZE / 2;
-      const dx = clickX - playerCenterX;
-      const dy = clickY - playerCenterY;
+  useEffect(() => {
+    let animationId = 0;
 
-      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) {
-        setMessage("가고 싶은 방향의 길을 눌러주세요.");
-        return;
+    const getKeyboardVector = () => {
+      const keys = activeKeys.current;
+      let dx = 0;
+      let dy = 0;
+
+      if (keys.arrowup || keys.w || keys.keyw || keys["8"] || keys.numpad8) dy -= 1;
+      if (keys.arrowdown || keys.s || keys.keys || keys["2"] || keys.numpad2) dy += 1;
+      if (keys.arrowleft || keys.a || keys.keya || keys["4"] || keys.numpad4) dx -= 1;
+      if (keys.arrowright || keys.d || keys.keyd || keys["6"] || keys.numpad6) dx += 1;
+
+      if (dx === 0 && dy === 0) return null;
+      return { x: dx, y: dy };
+    };
+
+    const tick = () => {
+      if (!transitionRef.current) {
+        const keyVector = getKeyboardVector();
+        const padVector = heldDirection.current ? DIRECTION_VECTOR[heldDirection.current] : null;
+        const manualVector = keyVector ?? padVector;
+
+        if (manualVector) {
+          pathQueue.current = [];
+          const length = Math.hypot(manualVector.x, manualVector.y) || 1;
+          const result = getMoveResult(
+            playerPositionRef.current,
+            (manualVector.x / length) * MOVE_SPEED,
+            (manualVector.y / length) * MOVE_SPEED
+          );
+
+          setWalkingState(true);
+          setWobble((current) => (current + 0.15) % (Math.PI * 2));
+
+          if (result.placeKey) {
+            handleTriggerEnter(result.placeKey);
+          } else if (!result.blocked) {
+            commitPlayerPosition(result.position);
+          }
+        } else if (pathQueue.current.length > 0) {
+          const nextWaypoint = pathQueue.current[0];
+          const currentPosition = playerPositionRef.current;
+          const dx = nextWaypoint.x - currentPosition.x;
+          const dy = nextWaypoint.y - currentPosition.y;
+          const distance = Math.hypot(dx, dy);
+
+          setWalkingState(true);
+          setWobble((current) => (current + 0.15) % (Math.PI * 2));
+
+          if (distance <= MOVE_SPEED) {
+            const waypointPlace = getPlaceFromTile(getTileFromPosition(nextWaypoint));
+            if (waypointPlace) {
+              handleTriggerEnter(waypointPlace);
+            } else {
+              pathQueue.current.shift();
+              commitPlayerPosition(nextWaypoint);
+            }
+          } else {
+            const result = getMoveResult(
+              currentPosition,
+              (dx / distance) * MOVE_SPEED,
+              (dy / distance) * MOVE_SPEED
+            );
+
+            if (result.placeKey) {
+              handleTriggerEnter(result.placeKey);
+            } else if (result.blocked) {
+              pathQueue.current = [];
+              setActivePlace(null);
+            } else {
+              commitPlayerPosition(result.position);
+            }
+          }
+        } else {
+          setWalkingState(false);
+          setActivePlace(null);
+        }
       }
 
-      const direction: Direction =
-        Math.abs(dx) > Math.abs(dy)
-          ? dx > 0
-            ? "right"
-            : "left"
-          : dy > 0
-            ? "down"
-            : "up";
+      animationId = requestAnimationFrame(tick);
+    };
 
-      movePlayer(direction);
-    },
-    [movePlayer, player]
-  );
+    animationId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(animationId);
+  }, [commitPlayerPosition, handleTriggerEnter, setActivePlace, setWalkingState]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.imageSmoothingEnabled = true;
+
+    for (let row = 0; row < GRID_ROWS; row++) {
+      for (let col = 0; col < GRID_COLS; col++) {
+        const tileKind = MAP_GRID[row][col];
+        const x = col * TILE_SIZE;
+        const y = row * TILE_SIZE;
+
+        if (tileKind === TILE.grass) {
+          ctx.fillStyle = (row + col) % 2 === 0 ? "#a7e7a1" : "#96dc92";
+          ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+          ctx.fillStyle = "#57b66a";
+          ctx.fillRect(x + 10, y + 12, 3, 8);
+          ctx.fillRect(x + 28, y + 28, 3, 7);
+        } else if (tileKind === TILE.path) {
+          ctx.fillStyle = "#f4df9c";
+          ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+          ctx.fillStyle = "#e4c875";
+          ctx.fillRect(x + 4, y + 21, TILE_SIZE - 8, 2);
+        } else if (tileKind === TILE.water) {
+          ctx.fillStyle = "#7ec8f5";
+          ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+          ctx.strokeStyle = "#dff7ff";
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(x + 8, y + 18);
+          ctx.quadraticCurveTo(x + 16, y + 10, x + 24, y + 18);
+          ctx.quadraticCurveTo(x + 32, y + 26, x + 40, y + 18);
+          ctx.stroke();
+        } else {
+          const placeKey = TILE_TO_PLACE[tileKind];
+          ctx.fillStyle = placeKey ? PLACES[placeKey].accent : "#e7ecf2";
+          ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+        }
+      }
+    }
+
+    for (const placeKey of PLACE_ORDER) {
+      const place = PLACES[placeKey];
+      const bounds = getPlaceBounds(place.tiles);
+      const x = bounds.minCol * TILE_SIZE + 6;
+      const y = bounds.minRow * TILE_SIZE + 6;
+      const width = (bounds.maxCol - bounds.minCol + 1) * TILE_SIZE - 12;
+      const height = (bounds.maxRow - bounds.minRow + 1) * TILE_SIZE - 12;
+      const centerX = x + width / 2;
+      const isActive = hoveredPlace === placeKey || activePlaceTarget === placeKey;
+
+      ctx.fillStyle = place.color;
+      drawRoundedRect(ctx, x, y, width, height, 8);
+
+      ctx.lineWidth = isActive ? 5 : 2;
+      ctx.strokeStyle = isActive ? "#111827" : "rgba(255,255,255,0.8)";
+      ctx.strokeRect(x + 2, y + 2, width - 4, height - 4);
+
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = "26px sans-serif";
+      ctx.fillText(place.icon, centerX, y + 26);
+
+      ctx.fillStyle = "#ffffff";
+      ctx.font = "bold 12px sans-serif";
+      place.labelLines.forEach((line, index) => {
+        const offset = place.labelLines.length === 1 ? 58 : 52 + index * 15;
+        ctx.fillText(line, centerX, y + offset);
+      });
+    }
+
+    const playerImage = playerImageRef.current;
+    const playerWidth = 34;
+    const playerHeight = 66;
+    const playerX = playerPosition.x - playerWidth / 2;
+    const playerY = playerPosition.y - playerHeight + 11;
+
+    ctx.save();
+    ctx.translate(playerX + playerWidth / 2, playerY + playerHeight / 2);
+    if (isWalking) {
+      ctx.rotate(Math.sin(wobble) * 0.08);
+    }
+
+    if (playerImageReady && playerImage) {
+      ctx.drawImage(playerImage, -playerWidth / 2, -playerHeight / 2, playerWidth, playerHeight);
+    } else {
+      ctx.fillStyle = character === "boy" ? "#3b82f6" : "#ec4899";
+      drawRoundedRect(ctx, -playerWidth / 2, -playerHeight / 2, playerWidth, playerHeight, 8);
+    }
+    ctx.restore();
+
+    const bubbleText = hoveredPlace ? PLACES[hoveredPlace].name : "어디로 갈까요?";
+    const bubbleWidth = Math.max(112, bubbleText.length * 15);
+    const bubbleHeight = 28;
+    const bubbleX = playerPosition.x - bubbleWidth / 2;
+    const bubbleY = playerY - 34;
+
+    ctx.fillStyle = "#ffffff";
+    drawRoundedRect(ctx, bubbleX, bubbleY, bubbleWidth, bubbleHeight, 9);
+    ctx.strokeStyle = "#047857";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(bubbleX + 1, bubbleY + 1, bubbleWidth - 2, bubbleHeight - 2);
+
+    ctx.fillStyle = "#065f46";
+    ctx.font = "bold 12px sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(bubbleText, playerPosition.x, bubbleY + bubbleHeight / 2);
+  }, [
+    activePlaceTarget,
+    character,
+    hoveredPlace,
+    isWalking,
+    playerImageReady,
+    playerPosition,
+    wobble,
+  ]);
+
+  const getCanvasTile = (event: MouseEvent<HTMLCanvasElement>): TileCoord => {
+    const canvas = event.currentTarget;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const x = (event.clientX - rect.left) * scaleX;
+    const y = (event.clientY - rect.top) * scaleY;
+
+    return {
+      col: Math.floor(x / TILE_SIZE),
+      row: Math.floor(y / TILE_SIZE),
+    };
+  };
+
+  const handleCanvasClick = (event: MouseEvent<HTMLCanvasElement>) => {
+    if (transitionRef.current) return;
+
+    const clickedTile = getCanvasTile(event);
+    const clickedPlace = getPlaceFromTile(clickedTile);
+
+    if (clickedPlace) {
+      walkToPlace(clickedPlace);
+      return;
+    }
+
+    const targetTile = findNearestWalkableTile(clickedTile.col, clickedTile.row);
+    if (!targetTile) return;
+
+    const startTile = getTileFromPosition(playerPositionRef.current);
+    const path = findPath(startTile, targetTile)?.map(tileCenter) ?? null;
+    startPath(path);
+  };
+
+  const handleCanvasMove = (event: MouseEvent<HTMLCanvasElement>) => {
+    const tile = getCanvasTile(event);
+    const place = getPlaceFromTile(tile);
+    setHoveredPlace((current) => (current === place ? current : place));
+  };
+
+  const handlePadDown = (direction: Direction, event: PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    if (transitionRef.current) return;
+
+    heldDirection.current = direction;
+    pathQueue.current = [];
+    setActivePlace(null);
+    setWalkingState(true);
+  };
+
+  const handlePadUp = (event: PointerEvent<HTMLButtonElement>) => {
+    event.preventDefault();
+    heldDirection.current = null;
+  };
+
+  const transitionPlace = transitioning ? PLACES[transitioning] : null;
+  const currentPlaceName = activePlaceTarget
+    ? PLACES[activePlaceTarget].name
+    : hoveredPlace
+      ? PLACES[hoveredPlace].name
+      : "해밀 생활마을";
 
   return (
-    <main className="min-h-screen bg-[#e8f5e5] px-4 py-5 text-slate-900 sm:px-6 lg:py-8">
-      <section className="mx-auto max-w-7xl">
-        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+    <main className="min-h-screen bg-[#eef7f1] px-4 py-5 text-slate-900">
+      {transitionPlace && (
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-950 text-white">
+          <span className="mb-4 inline-block text-6xl">{transitionPlace.icon}</span>
+          <p className="text-2xl font-black tracking-wide">{transitionPlace.name}으로 이동 중...</p>
+        </div>
+      )}
+
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-4">
+        <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-black text-emerald-700">2D 마을 탐색</p>
-            <h1 className="mt-1 text-3xl font-black text-slate-950">
-              마을에서 생활 미션 장소를 찾아가요
+            <p className="text-xs font-black text-emerald-700">해밀 생활마을</p>
+            <h1 className="mt-1 text-xl font-black sm:text-2xl">
+              {studentName} 학생, 오늘 갈 장소를 골라요
             </h1>
           </div>
-          <div className="rounded-lg border border-emerald-200 bg-white px-4 py-3 text-sm font-bold text-emerald-900 shadow-sm">
-            방향키/WASD 또는 맵 클릭으로 이동
-          </div>
-        </div>
+          <Link
+            href="/student/home"
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 shadow-sm transition hover:bg-slate-50"
+          >
+            돌아가기
+          </Link>
+        </header>
 
-        <div className="grid gap-4 xl:grid-cols-[1fr_320px]">
-          <div className="overflow-hidden rounded-lg border border-emerald-200 bg-white p-3 shadow-sm">
-            <div className="relative mx-auto w-full max-w-[1144px]">
-              <canvas
-                ref={canvasRef}
-                width={MAP_COLS * TILE_SIZE}
-                height={MAP_ROWS * TILE_SIZE}
-                onPointerDown={handleCanvasPointer}
-                className="block aspect-[26/18] w-full touch-none cursor-pointer rounded-lg bg-emerald-100"
-              />
-
-              <div className="absolute left-3 top-3 max-w-[78%] rounded-lg border border-white/70 bg-white/92 px-4 py-3 text-sm font-black text-slate-900 shadow-lg backdrop-blur-sm">
-                {message}
-              </div>
+        <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_260px]">
+          <div className="relative overflow-hidden rounded-lg border-4 border-emerald-700 bg-white shadow-xl">
+            <canvas
+              ref={canvasRef}
+              width={GRID_COLS * TILE_SIZE}
+              height={GRID_ROWS * TILE_SIZE}
+              onClick={handleCanvasClick}
+              onMouseMove={handleCanvasMove}
+              onMouseLeave={() => setHoveredPlace(null)}
+              className="block h-auto w-full cursor-pointer select-none touch-manipulation"
+            />
+            <div className="absolute left-3 top-3 rounded-lg bg-white/92 px-3 py-2 text-sm font-black text-emerald-900 shadow-sm backdrop-blur">
+              {currentPlaceName}
             </div>
           </div>
 
-          <aside className="grid gap-4">
-            <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm font-black text-emerald-700">선택 캐릭터</p>
-              <div className="mt-3 flex items-center gap-3">
-                <div className="relative h-20 w-20 overflow-hidden rounded-lg bg-emerald-50 ring-1 ring-emerald-100">
-                  <Image
-                    src={characterImage}
-                    alt={`${studentName} 캐릭터`}
-                    fill
-                    sizes="80px"
-                    className="object-contain"
-                  />
-                </div>
-                <div>
-                  <h2 className="text-xl font-black text-slate-950">{studentName}</h2>
-                  <p className="mt-1 text-sm font-bold leading-5 text-slate-600">
-                    초록 입구는 바로 미션으로 이동해요.
-                  </p>
-                </div>
-              </div>
-            </div>
+          <aside className="grid content-start gap-2">
+            {PLACE_ORDER.map((placeKey) => {
+              const place = PLACES[placeKey];
+              const isActive = activePlaceTarget === placeKey || hoveredPlace === placeKey;
 
-            <div className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm">
-              <p className="text-sm font-black text-emerald-700">미션 가능 장소</p>
-              <div className="mt-3 grid grid-cols-1 gap-2">
-                {readyPois.map((poi) => (
-                  <div
-                    key={poi.id}
-                    className={`rounded-lg border p-3 ${
-                      nearPoi?.id === poi.id
-                        ? "border-emerald-300 bg-emerald-50"
-                        : "border-slate-200 bg-slate-50"
-                    }`}
+              return (
+                <button
+                  key={placeKey}
+                  type="button"
+                  onClick={() => walkToPlace(placeKey)}
+                  className={`flex h-12 items-center gap-3 rounded-lg border px-3 text-left text-sm font-black shadow-sm transition ${
+                    isActive
+                      ? "border-slate-900 bg-slate-900 text-white"
+                      : "border-slate-200 bg-white text-slate-800 hover:border-emerald-500 hover:bg-emerald-50"
+                  }`}
+                >
+                  <span
+                    className="grid size-8 place-items-center rounded-lg text-lg"
+                    style={{ backgroundColor: isActive ? "rgba(255,255,255,0.18)" : place.accent }}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-black text-slate-950">{poi.title}</p>
-                      {poi.href && (
-                        <Link
-                          href={poi.href}
-                          className="rounded-md bg-emerald-600 px-3 py-1.5 text-[10px] font-black text-white shadow-sm transition hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-200"
-                        >
-                          이동 가능
-                        </Link>
-                      )}
-                    </div>
-                    <p className="mt-1 text-xs font-bold leading-5 text-slate-600">
-                      {poi.subtitle}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-amber-200 bg-amber-50 p-5">
-              <p className="text-sm font-black text-amber-950">준비 중 장소</p>
-              <p className="mt-2 text-sm font-bold leading-6 text-amber-900">
-                카페, 푸드코트, 테이블 오더 식당, 캐치테이블, 고속버스, KTX역,
-                공항, 병원, 행정복지센터, 편의점 택배, 셀프주유소, 목욕탕은
-                지도에 표시되어 있고 미션은 준비 중입니다.
-              </p>
-            </div>
+                    {place.icon}
+                  </span>
+                  <span>{place.name}</span>
+                </button>
+              );
+            })}
           </aside>
-        </div>
-      </section>
+        </section>
+
+        <section className="mx-auto grid w-48 grid-cols-3 gap-2">
+          <div />
+          <button
+            type="button"
+            aria-label="위로 이동"
+            onPointerDown={(event) => handlePadDown("up", event)}
+            onPointerUp={handlePadUp}
+            onPointerLeave={handlePadUp}
+            onPointerCancel={handlePadUp}
+            className="grid h-12 place-items-center rounded-lg bg-emerald-700 text-xl font-black text-white shadow-sm transition hover:bg-emerald-800 active:scale-95"
+          >
+            ▲
+          </button>
+          <div />
+
+          <button
+            type="button"
+            aria-label="왼쪽으로 이동"
+            onPointerDown={(event) => handlePadDown("left", event)}
+            onPointerUp={handlePadUp}
+            onPointerLeave={handlePadUp}
+            onPointerCancel={handlePadUp}
+            className="grid h-12 place-items-center rounded-lg bg-emerald-700 text-xl font-black text-white shadow-sm transition hover:bg-emerald-800 active:scale-95"
+          >
+            ◀
+          </button>
+          <div className="grid h-12 place-items-center rounded-lg border border-emerald-200 bg-white text-emerald-700">
+            ●
+          </div>
+          <button
+            type="button"
+            aria-label="오른쪽으로 이동"
+            onPointerDown={(event) => handlePadDown("right", event)}
+            onPointerUp={handlePadUp}
+            onPointerLeave={handlePadUp}
+            onPointerCancel={handlePadUp}
+            className="grid h-12 place-items-center rounded-lg bg-emerald-700 text-xl font-black text-white shadow-sm transition hover:bg-emerald-800 active:scale-95"
+          >
+            ▶
+          </button>
+
+          <div />
+          <button
+            type="button"
+            aria-label="아래로 이동"
+            onPointerDown={(event) => handlePadDown("down", event)}
+            onPointerUp={handlePadUp}
+            onPointerLeave={handlePadUp}
+            onPointerCancel={handlePadUp}
+            className="grid h-12 place-items-center rounded-lg bg-emerald-700 text-xl font-black text-white shadow-sm transition hover:bg-emerald-800 active:scale-95"
+          >
+            ▼
+          </button>
+          <div />
+        </section>
+      </div>
     </main>
   );
 }
