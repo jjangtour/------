@@ -258,11 +258,7 @@ export default function SafeReturnPage() {
   const [stopsLeft, setStopsLeft] = useState(BUS_STOPS_LIST.length);
   const [busCountdown, setBusCountdown] = useState(180);
   const [isSosOpen, setIsSosOpen] = useState(false);
-  const [studentName] = useState(() =>
-    typeof window !== "undefined"
-      ? localStorage.getItem("haemileum_selected_student") || "학생"
-      : "학생"
-  );
+  const [studentName, setStudentName] = useState("학생");
   const [location, setLocation] = useState<LocationSnapshot | null>(null);
   const [locationStatus, setLocationStatus] = useState<LocationStatus>("idle");
   const timerRef = useRef<number | null>(null);
@@ -279,7 +275,10 @@ export default function SafeReturnPage() {
   );
   const routePlan = useMemo(() => parseRoutePlan(routePlanText), [routePlanText]);
 
-  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
+  useEffect(() => {
+    setStudentName(localStorage.getItem("haemileum_selected_student") || "학생");
+    return () => { if (timerRef.current) clearInterval(timerRef.current); };
+  }, []);
 
   const saveReturnStatus = useCallback(
     (
@@ -448,10 +447,10 @@ export default function SafeReturnPage() {
   const showSosButton = phase !== "consent" && phase !== "arrived" && phase !== "confirm";
 
   return (
-    <main className="min-h-screen bg-[#f0faf4] text-slate-900">
+    <main className="min-h-dvh bg-[#f0faf4] text-slate-900">
       {/* Top bar */}
       {showSosButton && (
-        <header className="sticky top-[113px] z-40 flex items-center justify-between gap-3 border-b border-emerald-200 bg-white/90 px-4 py-3 shadow-sm backdrop-blur-md lg:top-[65px]">
+        <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-emerald-200 bg-white/90 px-4 py-3 shadow-sm backdrop-blur-md">
           <div className="flex items-center gap-2">
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-white text-sm font-black">집</span>
             <span className="text-base font-black text-slate-900">{studentName}의 안심귀가</span>

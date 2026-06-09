@@ -187,23 +187,6 @@ function HomecomingPageContent() {
     []
   );
 
-  useEffect(() => {
-    if (initSos) {
-      triggerSos();
-    } else {
-      speak(
-        "집으로 갈까요? 맞으면 네, 아니면 아니요를 눌러주세요.",
-        "집에 갈까요? 🏠"
-      );
-    }
-    return () => {
-      stopCamera();
-      if (audioRef.current) audioRef.current.pause();
-      if (speakingTimerRef.current) clearTimeout(speakingTimerRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   const triggerSos = useCallback(() => {
     setIsSos(true);
     speak(
@@ -243,6 +226,23 @@ function HomecomingPageContent() {
     streamRef.current = null;
     setArEnabled(false);
   };
+
+  useEffect(() => {
+    if (initSos) {
+      triggerSos();
+    } else {
+      speak(
+        "집으로 갈까요? 맞으면 네, 아니면 아니요를 눌러주세요.",
+        "집에 갈까요? 🏠"
+      );
+    }
+    return () => {
+      stopCamera();
+      if (audioRef.current) audioRef.current.pause();
+      if (speakingTimerRef.current) clearTimeout(speakingTimerRef.current);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleConfirm = () => {
     setPhase("locating");
@@ -426,24 +426,24 @@ function HomecomingPageContent() {
         }
       `}</style>
 
-      <main className="relative min-h-screen bg-[#f4f7f5] text-slate-900 font-sans overflow-hidden">
+      <main className="relative min-h-dvh bg-[#f4f7f5] text-slate-900 font-sans overflow-x-hidden overflow-y-auto">
         {/* ── AR camera background ── */}
         <video
           ref={videoRef}
           autoPlay
           playsInline
           muted
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-700 ${
+          className={`fixed inset-0 w-full h-full object-cover transition-opacity duration-700 ${
             arEnabled ? "opacity-100" : "opacity-0 pointer-events-none"
           }`}
         />
         {arEnabled && (
-          <div className="absolute inset-0 bg-black/25 pointer-events-none" />
+          <div className="fixed inset-0 bg-black/25 pointer-events-none" />
         )}
 
         {/* ── Main content ── */}
         <div
-          className={`relative z-10 w-full min-h-screen flex flex-col p-5 sm:p-8 max-w-lg mx-auto ${
+          className={`relative z-10 w-full min-h-dvh flex flex-col p-5 sm:p-8 max-w-lg mx-auto ${
             arEnabled ? "text-white" : ""
           }`}
         >

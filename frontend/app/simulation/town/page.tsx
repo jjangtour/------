@@ -36,23 +36,75 @@ type PlaceConfig = {
   tiles: TileCoord[];
 };
 
-const characterConfig: Record<CharacterKey, { name: string; image: string; alt: string }> = {
+const characterConfig: Record<CharacterKey, { name: string; image: string; sprite8way: string; alt: string }> = {
   boy: {
     name: "도윤",
     image: "/assets/helper/boy_full.png",
+    sprite8way: "/assets/helper/boy_8way.normalized.png",
     alt: "도윤 캐릭터",
   },
   girl: {
     name: "하늘",
     image: "/assets/helper/girl_full.png",
+    sprite8way: "/assets/helper/girl_8way.normalized.png",
     alt: "하늘 캐릭터",
   },
 };
+
+type Direction8 = "down" | "down-right" | "right" | "up-right" | "up" | "up-left" | "left" | "down-left";
+
+// Boy sprite columns (row-by-row from original 4×2 grid): clockwise from front
+// down, down-right, right, up-right, up, up-left, left, down-left
+const DIRECTION_TO_INDEX: Record<Direction8, number> = {
+  "down": 0,
+  "down-right": 1,
+  "right": 2,
+  "up-right": 3,
+  "up": 4,
+  "up-left": 5,
+  "left": 6,
+  "down-left": 7,
+};
+
+// Girl sprite columns (row-by-row from original 4×2 grid): counter-clockwise from front
+// down, down-left, left, up-left, up, up-right, right, down-right
+const GIRL_DIRECTION_TO_INDEX: Record<Direction8, number> = {
+  "down": 0,
+  "down-left": 1,
+  "left": 2,
+  "up-left": 3,
+  "up": 4,
+  "up-right": 5,
+  "right": 6,
+  "down-right": 7,
+};
+
+const get8Direction = (dx: number, dy: number): Direction8 => {
+  const angle = Math.atan2(dy, dx);
+  let normalizedAngle = angle;
+  if (normalizedAngle < 0) {
+    normalizedAngle += 2 * Math.PI;
+  }
+  const sector = Math.floor(((normalizedAngle + Math.PI / 8) % (2 * Math.PI)) / (Math.PI / 4));
+  const directions: Direction8[] = [
+    "right",
+    "down-right",
+    "down",
+    "down-left",
+    "left",
+    "up-left",
+    "up",
+    "up-right",
+  ];
+  return directions[sector];
+};
+
 
 const GRID_COLS = 18;
 const GRID_ROWS = 13;
 const TILE_SIZE = 48;
 const MOVE_SPEED = 2.9;
+const PLAYER_SPRITE_SIZE = 66;
 
 const TILE = {
   grass: 0,
@@ -393,8 +445,9 @@ const getMoveResult = (position: Point, dx: number, dy: number) => {
 export default function TownSimulationPage() {
   const router = useRouter();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const playerImageRef = useRef<HTMLImageElement | null>(null);
+  const spriteImageRef = useRef<HTMLImageElement | null>(null);
   const playerPositionRef = useRef<Point>(INITIAL_POSITION);
+  const playerDirectionRef = useRef<Direction8>("down");
   const activeKeys = useRef<Record<string, boolean>>({});
   const heldDirection = useRef<Direction | null>(null);
   const pathQueue = useRef<Point[]>([]);
@@ -404,12 +457,13 @@ export default function TownSimulationPage() {
 
   const [{ character, studentName }] = useState(getInitialStudentProfile);
   const [playerPosition, setPlayerPosition] = useState<Point>(INITIAL_POSITION);
+  const [playerDirection, setPlayerDirection] = useState<Direction8>("down");
   const [transitioning, setTransitioning] = useState<PlaceKey | null>(null);
   const [hoveredPlace, setHoveredPlace] = useState<PlaceKey | null>(null);
   const [activePlaceTarget, setActivePlaceTarget] = useState<PlaceKey | null>(null);
   const [wobble, setWobble] = useState(0);
   const [isWalking, setIsWalking] = useState(false);
-  const [playerImageReady, setPlayerImageReady] = useState(false);
+  const [spriteImageReady, setSpriteImageReady] = useState(false);
 
   const setActivePlace = useCallback((placeKey: PlaceKey | null) => {
     if (activePlaceTargetRef.current === placeKey) return;
@@ -429,6 +483,11 @@ export default function TownSimulationPage() {
   const commitPlayerPosition = useCallback((position: Point) => {
     playerPositionRef.current = position;
     setPlayerPosition(position);
+  }, []);
+
+  const commitPlayerDirection = useCallback((dir: Direction8) => {
+    playerDirectionRef.current = dir;
+    setPlayerDirection(dir);
   }, []);
 
   const handleTriggerEnter = useCallback(
@@ -479,13 +538,35 @@ export default function TownSimulationPage() {
   );
 
   useEffect(() => {
-    const playerImg = new window.Image();
-    playerImageRef.current = playerImg;
-    playerImg.src = characterConfig[character].image;
-    playerImg.onload = () => setPlayerImageReady(true);
+    const audio = new Audio("/assets/sound/town.mp3");
+    audio.loop = true;
+    audio.volume = 0.4;
+
+    const tryPlay = () => {
+      audio.play().catch(() => {});
+    };
+
+    // 브라우저 자동재생 정책 우회: 첫 사용자 상호작용 시 재생
+    tryPlay();
+    window.addEventListener("pointerdown", tryPlay, { once: true });
+    window.addEventListener("keydown", tryPlay, { once: true });
 
     return () => {
-      playerImg.onload = null;
+      audio.pause();
+      audio.src = "";
+      window.removeEventListener("pointerdown", tryPlay);
+      window.removeEventListener("keydown", tryPlay);
+    };
+  }, []);
+
+  useEffect(() => {
+    const spriteImg = new window.Image();
+    spriteImageRef.current = spriteImg;
+    spriteImg.src = characterConfig[character].sprite8way;
+    spriteImg.onload = () => setSpriteImageReady(true);
+
+    return () => {
+      spriteImg.onload = null;
     };
   }, [character]);
 
@@ -548,10 +629,16 @@ export default function TownSimulationPage() {
         if (manualVector) {
           pathQueue.current = [];
           const length = Math.hypot(manualVector.x, manualVector.y) || 1;
+          const dx = (manualVector.x / length) * MOVE_SPEED;
+          const dy = (manualVector.y / length) * MOVE_SPEED;
+
+          const newDir = get8Direction(dx, dy);
+          commitPlayerDirection(newDir);
+
           const result = getMoveResult(
             playerPositionRef.current,
-            (manualVector.x / length) * MOVE_SPEED,
-            (manualVector.y / length) * MOVE_SPEED
+            dx,
+            dy
           );
 
           setWalkingState(true);
@@ -571,6 +658,11 @@ export default function TownSimulationPage() {
 
           setWalkingState(true);
           setWobble((current) => (current + 0.15) % (Math.PI * 2));
+
+          if (distance > 0) {
+            const newDir = get8Direction(dx, dy);
+            commitPlayerDirection(newDir);
+          }
 
           if (distance <= MOVE_SPEED) {
             const waypointPlace = getPlaceFromTile(getTileFromPosition(nextWaypoint));
@@ -607,7 +699,7 @@ export default function TownSimulationPage() {
 
     animationId = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(animationId);
-  }, [commitPlayerPosition, handleTriggerEnter, setActivePlace, setWalkingState]);
+  }, [commitPlayerPosition, commitPlayerDirection, handleTriggerEnter, setActivePlace, setWalkingState]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -682,20 +774,57 @@ export default function TownSimulationPage() {
       });
     }
 
-    const playerImage = playerImageRef.current;
-    const playerWidth = 34;
-    const playerHeight = 66;
+    const spriteImage = spriteImageRef.current;
+    const playerWidth = PLAYER_SPRITE_SIZE;
+    const playerHeight = PLAYER_SPRITE_SIZE;
     const playerX = playerPosition.x - playerWidth / 2;
     const playerY = playerPosition.y - playerHeight + 11;
 
+    // Draw shadow under feet (drawn before character so character overlays it)
     ctx.save();
-    ctx.translate(playerX + playerWidth / 2, playerY + playerHeight / 2);
+    ctx.fillStyle = "rgba(0, 0, 0, 0.15)";
+    ctx.beginPath();
+    const shadowScale = isWalking ? 1 - Math.abs(Math.sin(wobble * 2)) * 0.15 : 1;
+    ctx.ellipse(
+      playerPosition.x,
+      playerPosition.y + 11,
+      16 * shadowScale,
+      6 * shadowScale,
+      0,
+      0,
+      2 * Math.PI
+    );
+    ctx.fill();
+    ctx.restore();
+
+    // Draw character with walking bounce and wobble
+    const bounceY = isWalking ? Math.abs(Math.sin(wobble * 2)) * 4 : 0;
+
+    ctx.save();
+    ctx.translate(playerX + playerWidth / 2, playerY + playerHeight / 2 - bounceY);
     if (isWalking) {
       ctx.rotate(Math.sin(wobble) * 0.08);
     }
 
-    if (playerImageReady && playerImage) {
-      ctx.drawImage(playerImage, -playerWidth / 2, -playerHeight / 2, playerWidth, playerHeight);
+    if (spriteImageReady && spriteImage) {
+      const frameWidth = spriteImage.width / 8;
+      const frameHeight = spriteImage.height;
+      const directionMap = character === "girl" ? GIRL_DIRECTION_TO_INDEX : DIRECTION_TO_INDEX;
+      const colIndex = directionMap[playerDirection];
+      const sx = colIndex * frameWidth;
+      const sy = 0;
+
+      ctx.drawImage(
+        spriteImage,
+        sx,
+        sy,
+        frameWidth,
+        frameHeight,
+        -playerWidth / 2,
+        -playerHeight / 2,
+        playerWidth,
+        playerHeight
+      );
     } else {
       ctx.fillStyle = character === "boy" ? "#3b82f6" : "#ec4899";
       drawRoundedRect(ctx, -playerWidth / 2, -playerHeight / 2, playerWidth, playerHeight, 8);
@@ -724,8 +853,9 @@ export default function TownSimulationPage() {
     character,
     hoveredPlace,
     isWalking,
-    playerImageReady,
+    spriteImageReady,
     playerPosition,
+    playerDirection,
     wobble,
   ]);
 

@@ -4,6 +4,11 @@ import Header from './Header';
 
 export default function ConditionalHeader() {
   const pathname = usePathname();
-  if (pathname === '/') return null;
+  if (
+    pathname === "/" ||
+    pathname === "/student/homecoming" ||
+    pathname === "/safe-return"
+  )
+    return null;
   return <Header />;
 }
