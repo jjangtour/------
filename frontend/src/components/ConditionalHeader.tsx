@@ -5,9 +5,7 @@ import Header from './Header';
 export default function ConditionalHeader() {
   const pathname = usePathname();
   if (
-    pathname === "/" ||
-    pathname === "/student/homecoming" ||
-    pathname === "/safe-return"
+    pathname === "/"
   )
     return null;
   return <Header />;

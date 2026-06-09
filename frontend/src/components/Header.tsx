@@ -3,7 +3,7 @@ import Link from "next/link";
 const menuItems = [
   { href: "/student/select", label: "학생 선택" },
   { href: "/student/home", label: "학생 홈" },
-  { href: "/safe-return", label: "안심귀가" },
+  { href: "/student/homecoming", label: "안심귀가" },
   { href: "/student/house", label: "우리집" },
   { href: "/simulation/town", label: "마을" },
   { href: "/mission/select", label: "미션" },

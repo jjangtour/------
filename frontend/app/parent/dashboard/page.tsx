@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 
 type ReturnData = {
@@ -84,6 +84,13 @@ type HomecomingState = {
   isSos: boolean;
   phase: string;
   battery: number;
+  latitude?: number;
+  longitude?: number;
+  currentStepIndex?: number;
+  waypoints?: string[];
+  destination?: string;
+  travelMode?: string;
+  isSimulating?: boolean;
 };
 
 const sampleStudent = "김하늘";
@@ -372,6 +379,14 @@ export default function ParentDashboardPage() {
     }
   }, [homecomingText, selectedStudent]);
 
+  // 주기적으로 storage 이벤트를 수동으로 트리거하여 백그라운드 탭 비활성화 등으로 인한 상태 동기화 지연을 완전히 방지합니다.
+  useEffect(() => {
+    const interval = setInterval(() => {
+      window.dispatchEvent(new Event("storage"));
+    }, 2000);
+    return () => clearInterval(interval);
+  }, []);
+
   const latestResult = results[results.length - 1];
   const latestRoutine = routines[routines.length - 1];
   const latestEmotion = emotions[emotions.length - 1];
@@ -565,23 +580,8 @@ export default function ParentDashboardPage() {
                 </div>
               </div>
 
-              {/* 시뮬레이션용 지도 영역 (모의 화면) */}
-              <div className="relative h-48 sm:h-full min-h-[200px] rounded-lg bg-slate-200 overflow-hidden ring-1 ring-slate-300">
-                <div className="absolute inset-0 opacity-40" style={{ backgroundImage: 'url("data:image/svg+xml,%3Csvg width=\\"20\\" height=\\"20\\" viewBox=\\"0 0 20 20\\" xmlns=\\"http://www.w3.org/2000/svg\\"%3E%3Cg fill=\\"%239C92AC\\" fill-opacity=\\"0.4\\" fill-rule=\\"evenodd\\"%3E%3Ccircle cx=\\"3\\" cy=\\"3\\" r=\\"3\\"/>%3Ccircle cx=\\"13\\" cy=\\"13\\" r=\\"3\\"/>%3C/g%3E%3C/svg%3E")' }}></div>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="text-center">
-                    <span className="text-4xl">🗺️</span>
-                    <p className="mt-2 text-sm font-bold text-slate-600 bg-white/80 px-3 py-1 rounded-full backdrop-blur-sm">실시간 지도 추적 중...</p>
-                  </div>
-                </div>
-                
-                {/* 핑 (내 위치) */}
-                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-                  <div className={`text-4xl animate-bounce drop-shadow-xl ${homecomingState.isSos ? "animate-ping" : ""}`}>
-                    {homecomingState.isSos ? "🆘" : "👧"}
-                  </div>
-                </div>
-              </div>
+              {/* 실시간 위치 및 웨이포인트 진행 SVG 맵 */}
+              <InteractiveProgressMap state={homecomingState} />
             </div>
             
             {homecomingState.isSos && (
@@ -762,6 +762,154 @@ function GuideCard({ title, text }: { title: string; text: string }) {
       <p className="mt-1 text-sm font-semibold leading-6 text-slate-600">
         {text}
       </p>
+    </div>
+  );
+}
+
+function InteractiveProgressMap({ state }: { state: HomecomingState }) {
+  const [mapMode, setMapMode] = useState<"progress" | "google">("progress");
+
+  const waypoints = state.waypoints || [];
+  const destination = state.destination || "집";
+  const stepIdx = state.currentStepIndex ?? 0;
+  const isSos = state.isSos ?? false;
+
+  const allNodes = ["출발지", ...waypoints, destination];
+  const totalNodes = allNodes.length;
+
+  const showGoogleMap = mapMode === "google" && GOOGLE_MAPS_API_KEY && state.latitude && state.longitude;
+
+  return (
+    <div className="relative w-full h-full min-h-[260px] bg-slate-50 rounded-xl border border-slate-200 overflow-hidden flex flex-col p-4 shadow-inner">
+      <div className="flex items-center justify-between border-b border-slate-200/60 pb-2 mb-3 shrink-0">
+        <div className="flex items-center gap-1.5">
+          <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="text-[10px] font-black text-slate-700 tracking-wider">이동 경로 맵</span>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          {GOOGLE_MAPS_API_KEY && state.latitude && state.longitude && (
+            <button
+              onClick={() => setMapMode(mapMode === "progress" ? "google" : "progress")}
+              className="text-[10px] font-black bg-indigo-50 border border-indigo-200 text-indigo-700 px-2.5 py-1 rounded-md hover:bg-indigo-100 transition active:scale-95"
+            >
+              {mapMode === "progress" ? "🗺️ 실시간 구글맵" : "📊 노드 진행맵"}
+            </button>
+          )}
+          <span className="text-[9px] font-bold text-slate-500 bg-slate-200/50 px-1.5 py-0.5 rounded">
+            {state.isSimulating ? "🧪 시뮬레이션" : "🛰️ GPS 수신"}
+          </span>
+        </div>
+      </div>
+
+      <div className="flex-1 relative flex items-center justify-center min-h-[160px]">
+        {showGoogleMap ? (
+          <iframe
+            title="학생 실시간 위치 Google 지도"
+            src={`https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${state.latitude},${state.longitude}&zoom=17&language=ko`}
+            className="absolute inset-0 w-full h-full border-0 rounded-lg"
+            loading="lazy"
+          />
+        ) : (
+          <svg className="absolute inset-0 w-full h-full p-4" viewBox="0 0 300 120" preserveAspectRatio="xMidYMid meet">
+            {/* Background path line (dashed gray) */}
+            <path
+              d="M 30 60 Q 110 20, 150 60 T 270 60"
+              fill="none"
+              stroke="#e2e8f0"
+              strokeWidth="4"
+              strokeDasharray="6,6"
+            />
+
+            {/* Completed path segment (solid emerald) */}
+            {stepIdx > 0 && (
+              <path
+                d="M 30 60 Q 110 20, 150 60 T 270 60"
+                fill="none"
+                stroke="#10b981"
+                strokeWidth="4"
+                strokeDasharray={`${Math.min(260, (stepIdx / (totalNodes - 1)) * 260)}, 300`}
+                className="transition-all duration-1000"
+              />
+            )}
+
+            {/* Nodes */}
+            {allNodes.map((node, i) => {
+              const ratio = i / (totalNodes - 1);
+              const x = 30 + ratio * 240;
+              const y = 60 - 25 * Math.sin(ratio * Math.PI * 2);
+
+              const isCompleted = i < stepIdx;
+              const isActive = i === stepIdx;
+
+              return (
+                <g key={i}>
+                  <circle
+                    cx={x}
+                    cy={y}
+                    r={isActive ? "9" : "5"}
+                    fill={isCompleted ? "#10b981" : isActive ? "#3b82f6" : "#cbd5e1"}
+                    className={isActive ? "animate-pulse" : ""}
+                  />
+                  
+                  {isActive && (
+                    <circle
+                      cx={x}
+                      cy={y}
+                      r="15"
+                      fill="none"
+                      stroke="#3b82f6"
+                      strokeWidth="2"
+                      className="animate-ping"
+                      strokeOpacity="0.4"
+                    />
+                  )}
+
+                  <text
+                    x={x}
+                    y={y - 14}
+                    textAnchor="middle"
+                    className={`text-[8px] font-black tracking-tight ${
+                      isActive ? "fill-blue-700 font-extrabold" : isCompleted ? "fill-emerald-700" : "fill-slate-400"
+                    }`}
+                  >
+                    {node.length > 6 ? node.slice(0, 5) + ".." : node}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Child Avatar Icon along the path */}
+            {(() => {
+              const ratio = Math.min(1, Math.max(0, stepIdx / (totalNodes - 1)));
+              const x = 30 + ratio * 240;
+              const y = 60 - 25 * Math.sin(ratio * Math.PI * 2);
+
+              return (
+                <g transform={`translate(${x}, ${y})`} className="transition-all duration-500">
+                  <circle
+                    cx="0"
+                    cy="0"
+                    r="12"
+                    fill={isSos ? "#ffe4e6" : "#ecfdf5"}
+                    stroke={isSos ? "#ef4444" : "#10b981"}
+                    strokeWidth="2.5"
+                    className="shadow-sm"
+                  />
+                  <text x="0" y="4" textAnchor="middle" className="text-[11px] select-none font-bold">
+                    {isSos ? "🆘" : "👧"}
+                  </text>
+                </g>
+              );
+            })()}
+          </svg>
+        )}
+      </div>
+
+      <div className="border-t border-slate-200/60 pt-2 mt-2 flex justify-between text-[9px] font-bold text-slate-500 shrink-0 select-none">
+        <span>🚩 출발: 학교</span>
+        <span>🏠 도착: {destination}</span>
+      </div>
     </div>
   );
 }

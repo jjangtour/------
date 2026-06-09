@@ -17,7 +17,7 @@ const quickActions = [
   {
     title: "집으로 가기",
     description: "안심 귀가 길 안내를 시작해요.",
-    href: "/safe-return",
+    href: "/student/homecoming",
     icon: "🏠",
     color: "border-emerald-400 bg-emerald-600 text-white hover:bg-emerald-700",
     highlight: true,
@@ -346,17 +346,73 @@ export default function StudentHomePage() {
             </Link>
             <button
               onClick={() => {
-                const now = new Date().toLocaleString("ko-KR");
-                localStorage.setItem("haemileum_homecoming_state", JSON.stringify({
-                  studentName,
-                  status: "위치 공유 중",
-                  updatedAt: now,
-                  message: "보호자에게 위치를 한 번 전송했습니다.",
-                  isSos: false,
-                  phase: "idle"
-                }));
-                window.dispatchEvent(new Event("storage"));
-                alert("보호자에게 현재 위치를 보냈습니다.");
+                const saveLocation = (lat: number, lng: number, source: "gps" | "demo", note?: string) => {
+                  const now = new Date().toLocaleTimeString("ko-KR");
+                  const state = {
+                    studentName,
+                    status: "위치 공유 중",
+                    updatedAt: now,
+                    message: note || "보호자에게 현재 위치를 한 번 전송했습니다.",
+                    isSos: false,
+                    phase: "idle",
+                    latitude: lat,
+                    longitude: lng,
+                    battery: 88,
+                  };
+                  const legacyData = {
+                    studentName,
+                    phase: "idle",
+                    method: "walking",
+                    updatedAt: now,
+                    location: {
+                      latitude: lat,
+                      longitude: lng,
+                      source,
+                      capturedAt: new Date().toISOString(),
+                      note: note || "학생 홈에서 수동 위치 전송",
+                    },
+                    mapUrl: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
+                  };
+                  localStorage.setItem("haemileum_homecoming_state", JSON.stringify(state));
+                  localStorage.setItem("haemileum_return_active", "true");
+                  localStorage.setItem("haemileum_return_data", JSON.stringify(legacyData));
+                  window.dispatchEvent(new Event("storage"));
+                  alert(`보호자에게 위치를 전송했습니다!\n(위도: ${lat.toFixed(5)}, 경도: ${lng.toFixed(5)})`);
+                };
+
+                if (navigator.geolocation) {
+                  navigator.geolocation.getCurrentPosition(
+                    (pos) => {
+                      saveLocation(pos.coords.latitude, pos.coords.longitude, "gps");
+                    },
+                    (err) => {
+                      console.warn("High-accuracy GPS failed or timed out. Trying low-accuracy...", err);
+                      navigator.geolocation.getCurrentPosition(
+                        (pos2) => {
+                          saveLocation(pos2.coords.latitude, pos2.coords.longitude, "gps");
+                        },
+                        (err2) => {
+                          console.warn("Low-accuracy GPS also failed", err2);
+                          saveLocation(
+                            37.5665,
+                            126.978,
+                            "demo",
+                            "위치 권한이 거부되었거나 센서 문제로 모의 연습 위치(서울시청)를 전송했습니다. 실제 위치를 전송하려면 주소창 설정에서 위치 접근을 허용해 주세요."
+                          );
+                        },
+                        { enableHighAccuracy: false, timeout: 2000, maximumAge: 30000 }
+                      );
+                    },
+                    { enableHighAccuracy: true, timeout: 2000, maximumAge: 10000 }
+                  );
+                } else {
+                  saveLocation(
+                    37.5665,
+                    126.978,
+                    "demo",
+                    "기기가 위치 기능을 지원하지 않아 모의 연습 위치(서울시청)를 전송했습니다."
+                  );
+                }
               }}
               className="group flex flex-col items-center justify-center rounded-xl border-4 border-sky-300 bg-sky-50 p-6 transition hover:bg-sky-100 active:scale-95"
             >
