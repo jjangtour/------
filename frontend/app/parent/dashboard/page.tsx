@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
+import Script from "next/script";
+import NaverMap from "@/components/NaverMap";
 
 type ReturnData = {
   studentName: string;
@@ -32,6 +34,10 @@ type RoutePlan = {
   travelMode: "walking" | "transit" | "driving";
   note: string;
   updatedAt: string;
+  homeLatitude?: number;
+  homeLongitude?: number;
+  destLatitude?: number;
+  destLongitude?: number;
 };
 
 const PHASE_LABELS: Record<string, { label: string; color: string; icon: string }> = {
@@ -96,6 +102,7 @@ type HomecomingState = {
 const sampleStudent = "김하늘";
 const ROUTE_PLAN_KEY = "haemileum_return_route_plan";
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+const NAVER_MAPS_CLIENT_ID = process.env.NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID;
 
 const sampleResults: StudentResult[] = [
   {
@@ -173,12 +180,7 @@ function getMapEmbedUrl(location: LocationSnapshot) {
 }
 
 function getMapUrl(location: LocationSnapshot) {
-  const params = new URLSearchParams({
-    api: "1",
-    query: `${location.latitude},${location.longitude}`,
-  });
-
-  return `https://www.google.com/maps/search/?${params.toString()}`;
+  return `https://map.naver.com/v5/entry/address/${location.longitude},${location.latitude}?c=17,0,0,0,dh`;
 }
 
 function getMethodLabel(method: string) {
@@ -217,22 +219,11 @@ function getRouteDestination(plan: RoutePlan) {
   return plan.destinationAddress || plan.homeAddress;
 }
 
-function getGoogleDirectionsUrl(plan: RoutePlan, origin?: LocationSnapshot | null) {
-  const params = new URLSearchParams({
-    api: "1",
-    destination: getRouteDestination(plan),
-    travelmode: plan.travelMode,
-  });
-
-  if (origin) {
-    params.set("origin", `${origin.latitude},${origin.longitude}`);
-  }
-
-  if (plan.waypoints.length > 0) {
-    params.set("waypoints", plan.waypoints.join("|"));
-  }
-
-  return `https://www.google.com/maps/dir/?${params.toString()}`;
+function getNaverDirectionsUrl(plan: RoutePlan, origin?: LocationSnapshot | null) {
+  const startLng = origin ? origin.longitude : 126.978;
+  const startLat = origin ? origin.latitude : 37.5665;
+  const destName = plan.destinationAddress || plan.homeAddress;
+  return `https://map.naver.com/v5/directions/${startLng},${startLat},%EC%B6%9C%EB%B0%9C%EC%A7%80/${encodeURIComponent(destName)}/-/walk`;
 }
 
 function getGoogleDirectionsEmbedUrl(plan: RoutePlan, origin?: LocationSnapshot | null) {
@@ -406,6 +397,7 @@ export default function ParentDashboardPage() {
 
   return (
     <main className="min-h-screen bg-[#f7faf8] px-4 py-6 text-slate-900 sm:px-6 lg:py-10">
+      <Script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js" strategy="afterInteractive" />
       <section className="mx-auto max-w-7xl">
         <div className="mb-6 overflow-hidden rounded-lg border border-indigo-100 bg-white shadow-sm">
           <div className="grid gap-0 lg:grid-cols-[1fr_0.86fr]">
@@ -767,7 +759,7 @@ function GuideCard({ title, text }: { title: string; text: string }) {
 }
 
 function InteractiveProgressMap({ state }: { state: HomecomingState }) {
-  const [mapMode, setMapMode] = useState<"progress" | "google">("progress");
+  const [mapMode, setMapMode] = useState<"progress" | "naver">("progress");
 
   const waypoints = state.waypoints || [];
   const destination = state.destination || "집";
@@ -777,7 +769,7 @@ function InteractiveProgressMap({ state }: { state: HomecomingState }) {
   const allNodes = ["출발지", ...waypoints, destination];
   const totalNodes = allNodes.length;
 
-  const showGoogleMap = mapMode === "google" && GOOGLE_MAPS_API_KEY && state.latitude && state.longitude;
+  const showNaverMap = mapMode === "naver" && NAVER_MAPS_CLIENT_ID && state.latitude && state.longitude;
 
   return (
     <div className="relative w-full h-full min-h-[260px] bg-slate-50 rounded-xl border border-slate-200 overflow-hidden flex flex-col p-4 shadow-inner">
@@ -788,12 +780,12 @@ function InteractiveProgressMap({ state }: { state: HomecomingState }) {
         </div>
         
         <div className="flex items-center gap-2">
-          {GOOGLE_MAPS_API_KEY && state.latitude && state.longitude && (
+          {NAVER_MAPS_CLIENT_ID && state.latitude && state.longitude && (
             <button
-              onClick={() => setMapMode(mapMode === "progress" ? "google" : "progress")}
+              onClick={() => setMapMode(mapMode === "progress" ? "naver" : "progress")}
               className="text-[10px] font-black bg-indigo-50 border border-indigo-200 text-indigo-700 px-2.5 py-1 rounded-md hover:bg-indigo-100 transition active:scale-95"
             >
-              {mapMode === "progress" ? "🗺️ 실시간 구글맵" : "📊 노드 진행맵"}
+              {mapMode === "progress" ? "🗺️ 실시간 네이버맵" : "📊 노드 진행맵"}
             </button>
           )}
           <span className="text-[9px] font-bold text-slate-500 bg-slate-200/50 px-1.5 py-0.5 rounded">
@@ -803,12 +795,21 @@ function InteractiveProgressMap({ state }: { state: HomecomingState }) {
       </div>
 
       <div className="flex-1 relative flex items-center justify-center min-h-[160px]">
-        {showGoogleMap ? (
-          <iframe
-            title="학생 실시간 위치 Google 지도"
-            src={`https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${state.latitude},${state.longitude}&zoom=17&language=ko`}
+        {showNaverMap ? (
+          <NaverMap
+            latitude={state.latitude!}
+            longitude={state.longitude!}
+            zoom={17}
+            markers={[
+              {
+                latitude: state.latitude!,
+                longitude: state.longitude!,
+                title: state.studentName,
+                iconHtml: `<div style="font-size: 26px; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); cursor: pointer;">${isSos ? "🆘" : "👧"}</div>`,
+              }
+            ]}
             className="absolute inset-0 w-full h-full border-0 rounded-lg"
-            loading="lazy"
+            fallbackText="네이버 지도를 표시할 수 없습니다."
           />
         ) : (
           <svg className="absolute inset-0 w-full h-full p-4" viewBox="0 0 300 120" preserveAspectRatio="xMidYMid meet">
@@ -927,6 +928,52 @@ function RoutePlannerPanel({ activeLocation }: { activeLocation: LocationSnapsho
     initialPlan?.travelMode ?? "walking"
   );
   const [note, setNote] = useState(initialPlan?.note ?? "");
+
+  const [homeLatitude, setHomeLatitude] = useState<number | undefined>(initialPlan?.homeLatitude);
+  const [homeLongitude, setHomeLongitude] = useState<number | undefined>(initialPlan?.homeLongitude);
+  const [destLatitude, setDestLatitude] = useState<number | undefined>(initialPlan?.destLatitude);
+  const [destLongitude, setDestLongitude] = useState<number | undefined>(initialPlan?.destLongitude);
+
+  const handleAddressSearch = (target: "home" | "dest") => {
+    if (typeof window === "undefined" || !(window as any).daum?.Postcode) {
+      alert("주소 검색 라이브러리가 아직 로드되지 않았습니다. 잠시 후 다시 시도해 주세요.");
+      return;
+    }
+
+    new (window as any).daum.Postcode({
+      oncomplete: async (data: any) => {
+        const fullAddress = data.roadAddress || data.address;
+        
+        if (target === "home") {
+          setHomeAddress(fullAddress);
+          const coords = await fetchCoords(fullAddress);
+          if (coords) {
+            setHomeLatitude(coords.latitude);
+            setHomeLongitude(coords.longitude);
+          }
+        } else {
+          setDestinationAddress(fullAddress);
+          const coords = await fetchCoords(fullAddress);
+          if (coords) {
+            setDestLatitude(coords.latitude);
+            setDestLongitude(coords.longitude);
+          }
+        }
+      }
+    }).open();
+  };
+
+  const fetchCoords = async (addr: string) => {
+    try {
+      const res = await fetch(`/api/geocode?query=${encodeURIComponent(addr)}`);
+      if (res.ok) {
+        return await res.json() as { latitude: number; longitude: number };
+      }
+    } catch (e) {
+      console.error("Geocoding failed", e);
+    }
+    return null;
+  };
   const routePlanText = useSyncExternalStore(
     subscribeToStorage,
     getRoutePlanStr,
@@ -947,6 +994,10 @@ function RoutePlannerPanel({ activeLocation }: { activeLocation: LocationSnapsho
       travelMode,
       note: note.trim(),
       updatedAt: new Date().toLocaleString("ko-KR"),
+      homeLatitude,
+      homeLongitude,
+      destLatitude: destLatitude ?? homeLatitude,
+      destLongitude: destLongitude ?? homeLongitude,
     };
 
     localStorage.setItem(ROUTE_PLAN_KEY, JSON.stringify(plan));
@@ -974,25 +1025,43 @@ function RoutePlannerPanel({ activeLocation }: { activeLocation: LocationSnapsho
               handleSave();
             }}
           >
-            <label className="grid gap-2">
+            <div className="grid gap-2">
               <span className="text-sm font-black text-slate-700">학생 집 주소</span>
-              <input
-                value={homeAddress}
-                onChange={(event) => setHomeAddress(event.target.value)}
-                placeholder="예: 서울시 ○○구 ○○로 12"
-                className="min-h-12 rounded-lg border border-slate-200 bg-slate-50 px-4 text-base font-bold text-slate-900 outline-none focus:border-emerald-400 focus:bg-white"
-              />
-            </label>
+              <div className="grid grid-cols-[1fr_auto] gap-2">
+                <input
+                  value={homeAddress}
+                  onChange={(event) => setHomeAddress(event.target.value)}
+                  placeholder="예: 서울시 ○○구 ○○로 12"
+                  className="min-h-12 rounded-lg border border-slate-200 bg-slate-50 px-4 text-base font-bold text-slate-900 outline-none focus:border-emerald-400 focus:bg-white"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleAddressSearch("home")}
+                  className="min-h-12 bg-indigo-600 hover:bg-indigo-700 text-white font-black px-4 rounded-lg text-sm transition active:scale-95 cursor-pointer"
+                >
+                  🔍 주소 검색
+                </button>
+              </div>
+            </div>
 
-            <label className="grid gap-2">
+            <div className="grid gap-2">
               <span className="text-sm font-black text-slate-700">도착지</span>
-              <input
-                value={destinationAddress}
-                onChange={(event) => setDestinationAddress(event.target.value)}
-                placeholder="집 주소와 같으면 비워도 돼요"
-                className="min-h-12 rounded-lg border border-slate-200 bg-slate-50 px-4 text-base font-bold text-slate-900 outline-none focus:border-emerald-400 focus:bg-white"
-              />
-            </label>
+              <div className="grid grid-cols-[1fr_auto] gap-2">
+                <input
+                  value={destinationAddress}
+                  onChange={(event) => setDestinationAddress(event.target.value)}
+                  placeholder="집 주소와 같으면 비워도 돼요"
+                  className="min-h-12 rounded-lg border border-slate-200 bg-slate-50 px-4 text-base font-bold text-slate-900 outline-none focus:border-emerald-400 focus:bg-white"
+                />
+                <button
+                  type="button"
+                  onClick={() => handleAddressSearch("dest")}
+                  className="min-h-12 bg-indigo-600 hover:bg-indigo-700 text-white font-black px-4 rounded-lg text-sm transition active:scale-95 cursor-pointer"
+                >
+                  🔍 주소 검색
+                </button>
+              </div>
+            </div>
 
             <label className="grid gap-2">
               <span className="text-sm font-black text-slate-700">웨이포인트</span>
@@ -1084,8 +1153,7 @@ function RoutePlanPreview({
     );
   }
 
-  const embedUrl = getGoogleDirectionsEmbedUrl(plan, activeLocation);
-  const directionsUrl = getGoogleDirectionsUrl(plan, activeLocation);
+  const directionsUrl = getNaverDirectionsUrl(plan, activeLocation);
   const routeItems = ["현재 위치", ...plan.waypoints, getRouteDestination(plan)];
 
   return (
@@ -1106,7 +1174,7 @@ function RoutePlanPreview({
           rel="noreferrer"
           className="inline-flex min-h-10 items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-black text-white hover:bg-emerald-700"
         >
-          Google 지도 열기
+          네이버 지도 열기
         </a>
       </div>
 
@@ -1132,14 +1200,28 @@ function RoutePlanPreview({
         </p>
       )}
 
-      {embedUrl && (
-        <div className="mt-4 h-64 overflow-hidden rounded-lg border border-emerald-200 bg-white">
-          <iframe
-            title="보호자 설정 Google 길찾기"
-            src={embedUrl}
-            className="h-full w-full border-0"
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
+      {NAVER_MAPS_CLIENT_ID && (
+        <div className="mt-4 h-64 overflow-hidden rounded-lg border border-emerald-200 bg-white relative">
+          <NaverMap
+            latitude={activeLocation ? activeLocation.latitude : (plan.homeLatitude ?? 37.5665)}
+            longitude={activeLocation ? activeLocation.longitude : (plan.homeLongitude ?? 126.978)}
+            zoom={16}
+            markers={[
+              ...(activeLocation ? [{
+                latitude: activeLocation.latitude,
+                longitude: activeLocation.longitude,
+                title: "출발지",
+                iconHtml: `<div style="font-size: 26px; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); cursor: pointer;">🏫</div>`,
+              }] : []),
+              {
+                latitude: plan.destLatitude || plan.homeLatitude || (activeLocation ? activeLocation.latitude + 0.001 : 37.5675),
+                longitude: plan.destLongitude || plan.homeLongitude || (activeLocation ? activeLocation.longitude + 0.001 : 126.979),
+                title: "목적지",
+                iconHtml: `<div style="font-size: 26px; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); cursor: pointer;">🏠</div>`,
+              }
+            ]}
+            className="h-full w-full rounded-none"
+            fallbackText="경로 지도를 표시할 수 없습니다."
           />
         </div>
       )}
@@ -1178,25 +1260,33 @@ function ReturnLocationPanel({ data }: { data: ReturnData }) {
   return (
     <div className="border-t border-emerald-100 bg-white px-5 py-5">
       <div className="grid gap-4 lg:grid-cols-[1.15fr_0.85fr]">
-        {mapEmbedUrl ? (
-          <div className="h-56 overflow-hidden rounded-lg border border-slate-200 bg-slate-100">
-            <iframe
-              title={`${data.studentName} 현재 위치 Google 지도`}
-              src={mapEmbedUrl}
-              className="h-full w-full border-0"
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
+        {NAVER_MAPS_CLIENT_ID ? (
+          <div className="h-56 overflow-hidden rounded-lg border border-slate-200 bg-slate-100 relative">
+            <NaverMap
+              latitude={location.latitude}
+              longitude={location.longitude}
+              zoom={17}
+              markers={[
+                {
+                  latitude: location.latitude,
+                  longitude: location.longitude,
+                  title: data.studentName,
+                  iconHtml: `<div style="font-size: 26px; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); cursor: pointer;">${data.phase === "sos" ? "🆘" : "👧"}</div>`,
+                }
+              ]}
+              className="h-full w-full rounded-none"
+              fallbackText="실시간 위치 지도를 표시할 수 없습니다."
             />
           </div>
         ) : (
           <div className="flex h-56 items-center justify-center rounded-lg border border-slate-200 bg-slate-100 px-5 text-center text-sm font-bold leading-6 text-slate-500">
-            Google Maps API 키가 설정되면 지도가 표시돼요.
+            네이버 지도 Client ID가 설정되면 지도가 표시돼요.
           </div>
         )}
 
         <div className="rounded-lg bg-emerald-50 p-4 ring-1 ring-emerald-100">
           <p className="text-xs font-black uppercase tracking-wider text-emerald-700">
-            Google Maps 위치 공유
+            네이버 지도 위치 공유
           </p>
           <h3 className="mt-1 text-xl font-black text-slate-950">
             {isActualGps ? "실제 위치 수신 중" : issueTitle}
@@ -1219,7 +1309,7 @@ function ReturnLocationPanel({ data }: { data: ReturnData }) {
             rel="noreferrer"
             className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-lg bg-emerald-600 px-4 py-2 text-sm font-black text-white hover:bg-emerald-700"
           >
-            Google 지도에서 보기
+            네이버 지도에서 보기
           </a>
         </div>
       </div>

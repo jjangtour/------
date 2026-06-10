@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, useCallback, useRef, useSyncExternalStore, Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
+import NaverMap from "@/components/NaverMap";
 
 type HomecomingPhase =
   | "confirm"
@@ -52,10 +53,15 @@ type RoutePlan = {
   travelMode: "walking" | "transit" | "driving";
   note: string;
   updatedAt: string;
+  homeLatitude?: number;
+  homeLongitude?: number;
+  destLatitude?: number;
+  destLongitude?: number;
 };
 
 const ROUTE_PLAN_KEY = "haemileum_return_route_plan";
 const GOOGLE_MAPS_API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+const NAVER_MAPS_CLIENT_ID = process.env.NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID;
 const DEMO_START_LOCATION = { latitude: 37.5665, longitude: 126.978 }; // 서울시청
 
 const subscribeToStorage = (onStoreChange: () => void) => {
@@ -498,7 +504,10 @@ function HomecomingPageContent() {
     });
 
     // Final Step: Destination
-    const finalCoords = assignSimCoords(waypoints.length, waypoints.length);
+    const finalCoords = {
+      latitude: routePlan?.destLatitude || routePlan?.homeLatitude || DEMO_START_LOCATION.latitude + 0.003,
+      longitude: routePlan?.destLongitude || routePlan?.homeLongitude || DEMO_START_LOCATION.longitude + 0.003,
+    };
     steps.push({
       text: `${destination}에 도착했어요`,
       subtext: "안전하게 집 안에 들어왔어요",
@@ -1087,13 +1096,28 @@ function HomecomingPageContent() {
                       </div>
 
                       {/* Map iframe or SVG visual tracker path */}
-                      {GOOGLE_MAPS_API_KEY ? (
-                        <div className="h-44 bg-slate-100">
-                          <iframe
-                            title="안심귀가 맵 경로"
-                            src={`https://www.google.com/maps/embed/v1/place?key=${GOOGLE_MAPS_API_KEY}&q=${latitude},${longitude}&zoom=17&language=ko`}
-                            className="h-full w-full border-0"
-                            loading="lazy"
+                      {NAVER_MAPS_CLIENT_ID ? (
+                        <div className="h-44 bg-slate-100 overflow-hidden relative">
+                          <NaverMap
+                            latitude={latitude}
+                            longitude={longitude}
+                            zoom={17}
+                            markers={[
+                              {
+                                latitude,
+                                longitude,
+                                title: "학생 위치",
+                                iconHtml: `<div style="font-size: 26px; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); cursor: pointer;">👧</div>`,
+                              },
+                              {
+                                latitude: targetLat,
+                                longitude: targetLng,
+                                title: currentNav.text,
+                                iconHtml: `<div style="font-size: 26px; line-height: 1; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); cursor: pointer;">📍</div>`,
+                              },
+                            ]}
+                            className="h-full w-full rounded-none"
+                            fallbackText="네이버 지도를 표시할 수 없습니다."
                           />
                         </div>
                       ) : (
@@ -1230,6 +1254,61 @@ function HomecomingPageContent() {
                     >
                       🔊
                     </button>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <a
+                      href={`nmap://route/walk?slat=${latitude}&slng=${longitude}&sname=${encodeURIComponent("현재위치")}&dlat=${targetLat}&dlng=${targetLng}&dname=${encodeURIComponent(currentNav.text)}&appname=haemileum`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        const appUrl = `nmap://route/walk?slat=${latitude}&slng=${longitude}&sname=${encodeURIComponent("현재위치")}&dlat=${targetLat}&dlng=${targetLng}&dname=${encodeURIComponent(currentNav.text)}&appname=haemileum`;
+                        const webUrl = `https://map.naver.com/v5/directions/${longitude},${latitude},%ED%98%84%EC%9E%AC%EC%9C%84%EC%B9%98/${targetLng},${targetLat},${encodeURIComponent(currentNav.text)}/-/walk`;
+                        
+                        const clickedAt = +new Date();
+                        const isAndroid = /Android/i.test(navigator.userAgent);
+                        const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+                        
+                        if (isAndroid || isIOS) {
+                          window.location.href = appUrl;
+                          setTimeout(() => {
+                            if (+new Date() - clickedAt < 2000) {
+                              window.location.href = webUrl;
+                            }
+                          }, 1500);
+                        } else {
+                          window.open(webUrl, "_blank");
+                        }
+                      }}
+                      className="flex items-center justify-center gap-1.5 py-3.5 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-900 border border-emerald-200 text-xs font-black transition active:scale-95 text-center cursor-pointer"
+                    >
+                      💚 네이버 길찾기
+                    </a>
+                    <a
+                      href={`kakaomap://route?sp=${latitude},${longitude}&ep=${targetLat},${targetLng}&by=FOOT`}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        const appUrl = `kakaomap://route?sp=${latitude},${longitude}&ep=${targetLat},${targetLng}&by=FOOT`;
+                        const webUrl = `https://map.kakao.com/?sX=${longitude}&sY=${latitude}&sName=%ED%98%84%EC%9E%AC%EC%9C%84%EC%B9%98&eX=${targetLng}&eY=${targetLat}&eName=${encodeURIComponent(currentNav.text)}`;
+                        
+                        const clickedAt = +new Date();
+                        const isAndroid = /Android/i.test(navigator.userAgent);
+                        const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+                        
+                        if (isAndroid || isIOS) {
+                          window.location.href = appUrl;
+                          setTimeout(() => {
+                            if (+new Date() - clickedAt < 2000) {
+                              window.location.href = webUrl;
+                            }
+                          }, 1500);
+                        } else {
+                          window.open(webUrl, "_blank");
+                        }
+                      }}
+                      className="flex items-center justify-center gap-1.5 py-3.5 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-black transition active:scale-95 text-center cursor-pointer"
+                    >
+                      💛 카카오 길찾기
+                    </a>
                   </div>
                 </div>
 
