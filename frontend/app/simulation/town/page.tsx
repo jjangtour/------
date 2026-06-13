@@ -2,7 +2,6 @@
 
 import {
   type MouseEvent,
-  type PointerEvent,
   useCallback,
   useEffect,
   useRef,
@@ -898,20 +897,7 @@ export default function TownSimulationPage() {
     setHoveredPlace((current) => (current === place ? current : place));
   };
 
-  const handlePadDown = (direction: Direction, event: PointerEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    if (transitionRef.current) return;
 
-    heldDirection.current = direction;
-    pathQueue.current = [];
-    setActivePlace(null);
-    setWalkingState(true);
-  };
-
-  const handlePadUp = (event: PointerEvent<HTMLButtonElement>) => {
-    event.preventDefault();
-    heldDirection.current = null;
-  };
 
   const transitionPlace = transitioning ? PLACES[transitioning] : null;
   const currentPlaceName = activePlaceTarget
@@ -936,6 +922,9 @@ export default function TownSimulationPage() {
             <h1 className="mt-1 text-xl font-black sm:text-2xl">
               {studentName} 학생, 오늘 갈 장소를 골라요
             </h1>
+            <p className="mt-1 text-sm font-semibold text-emerald-850">
+              ⌨️ 키보드 방향키(또는 WASD)나 🖱️ 마우스 클릭(터치)으로 캐릭터를 조종해 보세요!
+            </p>
           </div>
           <Link
             href="/student/home"
@@ -988,62 +977,6 @@ export default function TownSimulationPage() {
               );
             })}
           </aside>
-        </section>
-
-        <section className="mx-auto grid w-48 grid-cols-3 gap-2">
-          <div />
-          <button
-            type="button"
-            aria-label="위로 이동"
-            onPointerDown={(event) => handlePadDown("up", event)}
-            onPointerUp={handlePadUp}
-            onPointerLeave={handlePadUp}
-            onPointerCancel={handlePadUp}
-            className="grid h-12 place-items-center rounded-lg bg-emerald-700 text-xl font-black text-white shadow-sm transition hover:bg-emerald-800 active:scale-95"
-          >
-            ▲
-          </button>
-          <div />
-
-          <button
-            type="button"
-            aria-label="왼쪽으로 이동"
-            onPointerDown={(event) => handlePadDown("left", event)}
-            onPointerUp={handlePadUp}
-            onPointerLeave={handlePadUp}
-            onPointerCancel={handlePadUp}
-            className="grid h-12 place-items-center rounded-lg bg-emerald-700 text-xl font-black text-white shadow-sm transition hover:bg-emerald-800 active:scale-95"
-          >
-            ◀
-          </button>
-          <div className="grid h-12 place-items-center rounded-lg border border-emerald-200 bg-white text-emerald-700">
-            ●
-          </div>
-          <button
-            type="button"
-            aria-label="오른쪽으로 이동"
-            onPointerDown={(event) => handlePadDown("right", event)}
-            onPointerUp={handlePadUp}
-            onPointerLeave={handlePadUp}
-            onPointerCancel={handlePadUp}
-            className="grid h-12 place-items-center rounded-lg bg-emerald-700 text-xl font-black text-white shadow-sm transition hover:bg-emerald-800 active:scale-95"
-          >
-            ▶
-          </button>
-
-          <div />
-          <button
-            type="button"
-            aria-label="아래로 이동"
-            onPointerDown={(event) => handlePadDown("down", event)}
-            onPointerUp={handlePadUp}
-            onPointerLeave={handlePadUp}
-            onPointerCancel={handlePadUp}
-            className="grid h-12 place-items-center rounded-lg bg-emerald-700 text-xl font-black text-white shadow-sm transition hover:bg-emerald-800 active:scale-95"
-          >
-            ▼
-          </button>
-          <div />
         </section>
       </div>
     </main>

@@ -52,7 +52,7 @@ const worlds: World[] = [
     ringColor: 'ring-purple-400',
     missions: ['물건 고르기', '계산하기', '봉투 요청하기'],
     goal: '소비 생활',
-    href: '/simulation/town',
+    href: '/village',
   },
   {
     id: 'safety',

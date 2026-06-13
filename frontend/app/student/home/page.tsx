@@ -30,10 +30,10 @@ const quickActions = [
     color: "border-sky-200 bg-sky-50 text-sky-900 hover:bg-sky-100",
   },
   {
-    title: "마을 탐색",
-    description: "캐릭터를 움직여 미션을 찾아요.",
-    href: "/simulation/town",
-    icon: "MAP",
+    title: "해밀 마을",
+    description: "이웃과 대화하고 채집하며 힐링해요.",
+    href: "/village",
+    icon: "🏡",
     color: "border-lime-200 bg-lime-50 text-lime-900 hover:bg-lime-100",
   },
   {

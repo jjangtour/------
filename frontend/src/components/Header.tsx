@@ -5,7 +5,7 @@ const menuItems = [
   { href: "/student/home", label: "학생 홈" },
   { href: "/student/homecoming", label: "안심귀가" },
   { href: "/student/house", label: "우리집" },
-  { href: "/simulation/town", label: "마을" },
+  { href: "/village", label: "마을" },
   { href: "/mission/select", label: "미션" },
   { href: "/emotion/check", label: "마음 기록" },
   { href: "/routine/check", label: "루틴" },

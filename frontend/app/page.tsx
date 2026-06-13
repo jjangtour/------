@@ -684,7 +684,7 @@ export default function Home() {
             </p>
             <div className="mt-4 flex flex-wrap justify-center gap-4 text-xs font-bold text-emerald-400/50">
               <Link href="/" className="hover:text-emerald-300">홈</Link>
-              <Link href="/simulation/town" className="hover:text-emerald-300">2D 마을</Link>
+              <Link href="/village" className="hover:text-emerald-300">2D 마을</Link>
               <Link href="/teacher/dashboard" className="hover:text-emerald-300">교사 대시보드</Link>
               <Link href="/parent/dashboard" className="hover:text-emerald-300">학부모</Link>
               <Link href="/admin/tools" className="hover:text-emerald-300">관리</Link>

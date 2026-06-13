@@ -498,73 +498,8 @@ export default function MissionSelectPage() {
           })}
         </div>
 
-        {/* Mission panel */}
-        {selectedEntry ? (
-          <div className="mb-6 overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-md">
-            <div className="flex items-center gap-4 border-b border-emerald-100 bg-emerald-50 px-6 py-5">
-              <span className="flex h-14 w-14 items-center justify-center rounded-xl bg-white text-3xl shadow-sm">
-                {selectedEntry.place.icon}
-              </span>
-              <div>
-                <p className="text-sm font-bold text-emerald-700">
-                  {selectedEntry.zone.name}
-                </p>
-                <h3 className="text-2xl font-black text-slate-900">
-                  {selectedEntry.place.name}
-                </h3>
-              </div>
-            </div>
-
-            <div className="grid gap-4 p-5 sm:grid-cols-2">
-              {selectedEntry.place.missions.map((mission) => (
-                <button
-                  key={mission.id}
-                  type="button"
-                  onClick={() => startMission(mission)}
-                  className="group rounded-xl border border-slate-200 p-5 text-left shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-emerald-200"
-                >
-                  <div className="flex flex-wrap gap-2">
-                    <span
-                      className={`rounded-full px-3 py-1 text-xs font-black ${LEVEL_COLORS[mission.level]}`}
-                    >
-                      {mission.level}
-                    </span>
-                    <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
-                      {mission.time}
-                    </span>
-                    <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200">
-                      {mission.status}
-                    </span>
-                  </div>
-
-                  <h4 className="mt-3 text-xl font-black text-slate-900">
-                    {mission.title}
-                  </h4>
-                  <p className="mt-2 text-sm leading-6 text-slate-600">
-                    {mission.description}
-                  </p>
-
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {mission.steps.map((step) => (
-                      <span
-                        key={step}
-                        className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600"
-                      >
-                        {step}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div className="mt-5 flex justify-end">
-                    <span className="rounded-lg bg-emerald-700 px-5 py-2.5 text-base font-black text-white group-hover:bg-emerald-800">
-                      미션 시작하기
-                    </span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-        ) : (
+        {/* Guide helper card (only visible when no place is selected) */}
+        {!selectedEntry && (
           <div className="mb-6 rounded-2xl border border-slate-200 bg-white py-10 text-center shadow-sm">
             <p className="text-4xl">👆</p>
             <p className="mt-3 text-xl font-black text-slate-700">
@@ -573,6 +508,94 @@ export default function MissionSelectPage() {
             <p className="mt-1 text-sm font-semibold text-slate-500">
               장소를 누르면 미션 카드가 나타납니다
             </p>
+          </div>
+        )}
+
+        {/* Mission list overlay (Modal / Bottom Sheet) */}
+        {selectedEntry && (
+          <div
+            className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/60 p-0 backdrop-blur-sm sm:items-center sm:p-4"
+            onClick={() => setSelectedPlaceId(null)}
+          >
+            <div
+              className="flex max-h-[85vh] w-full flex-col rounded-t-3xl bg-white p-6 shadow-2xl transition-all sm:max-h-[90vh] sm:max-w-2xl sm:rounded-3xl"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between border-b border-slate-100 pb-4 mb-4">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-3xl shadow-sm">
+                    {selectedEntry.place.icon}
+                  </span>
+                  <div>
+                    <span className="inline-block rounded-full bg-emerald-100/60 px-2.5 py-0.5 text-xs font-black text-emerald-800">
+                      {selectedEntry.zone.name}
+                    </span>
+                    <h3 className="mt-1.5 text-2xl font-black text-slate-900">
+                      {selectedEntry.place.name}
+                    </h3>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSelectedPlaceId(null)}
+                  className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 active:scale-95 transition-all text-xl font-bold"
+                  aria-label="닫기"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Scrollable Mission List */}
+              <div className="overflow-y-auto pr-1 space-y-4 pb-2">
+                {selectedEntry.place.missions.map((mission) => (
+                  <button
+                    key={mission.id}
+                    type="button"
+                    onClick={() => startMission(mission)}
+                    className="group block w-full rounded-2xl border border-slate-200 p-5 text-left shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50/20 focus:outline-none focus:ring-4 focus:ring-emerald-100 active:scale-[0.99]"
+                  >
+                    <div className="flex flex-wrap gap-2">
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-black ${LEVEL_COLORS[mission.level]}`}
+                      >
+                        {mission.level}
+                      </span>
+                      <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
+                        {mission.time}
+                      </span>
+                      <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-slate-600 ring-1 ring-slate-200">
+                        {mission.status}
+                      </span>
+                    </div>
+
+                    <h4 className="mt-3.5 text-xl font-black text-slate-900 group-hover:text-emerald-800">
+                      {mission.title}
+                    </h4>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">
+                      {mission.description}
+                    </p>
+
+                    <div className="mt-3.5 flex flex-wrap gap-2">
+                      {mission.steps.map((step) => (
+                        <span
+                          key={step}
+                          className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600"
+                        >
+                          {step}
+                        </span>
+                      ))}
+                    </div>
+
+                    <div className="mt-5 flex justify-end">
+                      <span className="rounded-xl bg-emerald-700 px-6 py-3 text-base font-black text-white group-hover:bg-emerald-800 transition-colors shadow-sm">
+                        미션 시작하기
+                      </span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
