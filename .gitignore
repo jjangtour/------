@@ -1,3 +1,7 @@
 deploy.zip
 sessions/
 .claude/
+KnowledgeBase.zip
+frontend_deploy.zip
+*.log
+*.tsbuildinfo
