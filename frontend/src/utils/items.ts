@@ -5,7 +5,8 @@ export type ItemId =
   | "student_id"
   | "phone"
   | "emergency_card"
-  | "cash";
+  | "cash"
+  | "fishing_rod";
 
 export type MissionItemId = "bus" | "kiosk" | "atm";
 
@@ -126,6 +127,16 @@ export const POCKET_ITEMS: PocketItem[] = [
     colorClass: "border-lime-200 bg-lime-50 text-lime-950",
     usedFor: [],
     wrongMessage: "현금도 물건을 살 때 쓸 수 있지만, 이번 키오스크 미션에서는 결제 카드를 연습해요.",
+  },
+  {
+    id: "fishing_rod",
+    name: "낚시대",
+    icon: "ROD",
+    place: "물가/낚시터",
+    action: "낚시하기",
+    colorClass: "border-emerald-200 bg-emerald-50 text-emerald-950",
+    usedFor: [],
+    wrongMessage: "낚시대를 가지고 낚시터로 가면 낚시를 할 수 있어요.",
   },
 ];
 

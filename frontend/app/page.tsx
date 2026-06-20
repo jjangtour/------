@@ -5,6 +5,7 @@ import WorldMapSection from '@/components/landing/WorldMapSection';
 import ItemPocketSection from '@/components/landing/ItemPocketSection';
 import DemoSection from '@/components/landing/DemoSection';
 import FaqSection from '@/components/landing/FaqSection';
+import VillageStatus from '@/components/landing/VillageStatus';
 
 // ─── Static data ────────────────────────────────────────────────────────────
 
@@ -172,6 +173,8 @@ export default function Home() {
                 <br />
                 안전한 2D 마을에서 반복 연습합니다.
               </p>
+
+              <VillageStatus />
 
               <div className="mt-8 flex flex-wrap gap-3">
                 <Link
@@ -402,6 +405,119 @@ export default function Home() {
 
       {/* ── 7. Interactive Demo (client component) ───────────────────────── */}
       <DemoSection />
+
+      {/* ── 7.5 E-Book & Audiobook Section ────────────────────────────────── */}
+      <section id="audiobook-feature" className="bg-gradient-to-br from-stone-50 to-emerald-50/50 py-24">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="grid items-center gap-12 lg:grid-cols-2">
+            {/* Left: Overlapping Book Covers */}
+            <div className="relative flex justify-center lg:justify-start">
+              <div className="relative h-[340px] w-[340px] sm:h-[400px] sm:w-[400px]">
+                {/* Background glow */}
+                <div className="absolute inset-0 rounded-full bg-emerald-500/10 blur-3xl" />
+                
+                {/* Cloud cover (left) */}
+                <div className="absolute left-4 top-12 h-64 w-44 -rotate-12 overflow-hidden rounded-xl bg-slate-100 shadow-lg ring-1 ring-slate-200 transition-all duration-300 hover:rotate-0 hover:scale-105 hover:z-20 sm:h-72 sm:w-48">
+                  <Image
+                    src="/assets/audiobook/cover_cloud.png"
+                    alt="구름 위의 꿈"
+                    fill
+                    sizes="(max-width: 640px) 176px, 192px"
+                    className="object-cover"
+                  />
+                  <div className="absolute left-0 top-0 h-full w-2 bg-gradient-to-r from-black/20 to-transparent" />
+                </div>
+
+                {/* Alphabet cover (right) */}
+                <div className="absolute right-4 top-16 h-64 w-44 rotate-12 overflow-hidden rounded-xl bg-slate-100 shadow-lg ring-1 ring-slate-200 transition-all duration-300 hover:rotate-0 hover:scale-105 hover:z-20 sm:h-72 sm:w-48">
+                  <Image
+                    src="/assets/audiobook/cover_alphabet.png"
+                    alt="한글 기차 여행"
+                    fill
+                    sizes="(max-width: 640px) 176px, 192px"
+                    className="object-cover"
+                  />
+                  <div className="absolute left-0 top-0 h-full w-2 bg-gradient-to-r from-black/20 to-transparent" />
+                </div>
+
+                {/* Emotion cover (center front) */}
+                <div className="absolute left-1/2 top-4 h-72 w-48 -translate-x-1/2 overflow-hidden rounded-xl bg-slate-100 shadow-xl ring-1 ring-slate-200 transition-all duration-300 hover:-translate-y-2 hover:scale-105 hover:z-20 sm:h-80 sm:w-52">
+                  <Image
+                    src="/assets/audiobook/cover_emotion.png"
+                    alt="감정 친구들"
+                    fill
+                    sizes="(max-width: 640px) 192px, 208px"
+                    className="object-cover"
+                  />
+                  <div className="absolute left-0 top-0 h-full w-2 bg-gradient-to-r from-black/20 to-transparent" />
+                  <span className="absolute right-2 top-2 rounded-full bg-emerald-600 px-2 py-0.5 text-[9px] font-black text-white shadow">
+                    🎧 오디오
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Copy & Features */}
+            <div>
+              <p className="text-sm font-black uppercase tracking-widest text-emerald-600">
+                신규 콘텐츠 출시
+              </p>
+              <h2 className="mt-3 text-3xl font-black text-slate-950 sm:text-4xl">
+                읽고 들으며 자라는 생각,
+                <br />
+                <span className="text-emerald-700">이북 & 오디오북</span> 오픈!
+              </h2>
+              <p className="mt-4 text-base font-semibold leading-7 text-slate-500">
+                느린 학습자(경계선 지능) 아동의 눈높이에 맞춘 다채로운 그림책과 따뜻한 성우의 목소리로 낭독해주는 오디오북 콘텐츠가 추가되었습니다.
+              </p>
+
+              <div className="mt-8 space-y-4">
+                {[
+                  {
+                    icon: '🎙️',
+                    title: '성우의 다정하고 따뜻한 낭독',
+                    desc: '정형화된 기계음 대신 다정하고 풍부한 감정을 담은 목소리로 이야기를 들려주어 아동의 몰입과 공감을 돕습니다.',
+                  },
+                  {
+                    icon: '⏱️',
+                    title: '속도 조절 및 시각적 파형 연동',
+                    desc: '학생의 인지 속도에 맞춰 0.75배속 등 재생 속도를 간편하게 조절할 수 있고, 시각적으로 움직이는 파형과 함께 즐길 수 있습니다.',
+                  },
+                  {
+                    icon: '📋',
+                    title: '구체적인 챕터 이동과 편안한 UI',
+                    desc: '인지 부담을 낮추기 위해 챕터를 명확히 구분하고, 큼직한 제어 버튼과 프로그레스바로 누구나 쉽게 조작합니다.',
+                  },
+                  {
+                    icon: '💚',
+                    title: '성장 큐레이션 및 전용 도서 3종',
+                    desc: '감성 성장, 사회성 향상, 학습 동기 등 주제별 맞춤 큐레이션과 오디오 전용 도서(감정 친구들 등)를 제공합니다.',
+                  },
+                ].map((item) => (
+                  <div key={item.title} className="flex items-start gap-4">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-lg">
+                      {item.icon}
+                    </span>
+                    <div>
+                      <h3 className="text-sm font-black text-slate-900">{item.title}</h3>
+                      <p className="mt-0.5 text-sm font-semibold text-slate-500">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-8">
+                <Link
+                  href="/audiobook"
+                  className="inline-flex rounded-full bg-emerald-700 px-6 py-3.5 text-sm font-black text-white shadow-lg transition hover:bg-emerald-800 active:scale-95"
+                >
+                  🎧 오디오북 도서관 바로가기 →
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* ── 8. Educational Trust ─────────────────────────────────────────── */}
       <section id="trust" className="bg-amber-50 py-24">

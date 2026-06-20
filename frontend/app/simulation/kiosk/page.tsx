@@ -730,6 +730,49 @@ export default function KioskSimulationPage() {
       completedEpisodes: finalCompletedIds.length,
       safetySentences: episodes.map((item) => item.safetySentence),
     });
+    // Add Burger to inventory if quest is active
+    try {
+      const savedQuest = localStorage.getItem("haemileum_active_quest");
+      if (savedQuest) {
+        const quest = JSON.parse(savedQuest);
+        if (quest.status === "active") {
+          quest.status = "ready_to_deliver";
+          localStorage.setItem("haemileum_active_quest", JSON.stringify(quest));
+
+          // Give Burger to inventory
+          const savedInv = localStorage.getItem("haemileum_village_inventory");
+          let inv: any[] = savedInv ? JSON.parse(savedInv) : Array(20).fill(null);
+          
+          let success = false;
+          const existingIdx = inv.findIndex(item => item !== null && item.id === "burger" && item.count < 10);
+          if (existingIdx !== -1 && inv[existingIdx] !== null) {
+            inv[existingIdx] = {
+              ...inv[existingIdx],
+              count: inv[existingIdx].count + 1
+            };
+            success = true;
+          } else {
+            const emptyIdx = inv.findIndex(item => item === null);
+            if (emptyIdx !== -1) {
+              inv[emptyIdx] = {
+                id: "burger",
+                name: "햄버거",
+                emoji: "🍔",
+                count: 1,
+                rarity: "common"
+              };
+              success = true;
+            }
+          }
+          if (success) {
+            localStorage.setItem("haemileum_village_inventory", JSON.stringify(inv));
+          }
+        }
+      }
+    } catch (e) {
+      console.error("Failed to update quest inventory:", e);
+    }
+
     returnItemIdsToHome(["payment_card"]);
     localStorage.setItem("haemileum_results", JSON.stringify(saved));
     window.dispatchEvent(new Event("storage"));

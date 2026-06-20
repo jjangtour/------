@@ -1,0 +1,140 @@
+/* ─── Audiobook Section Styles ────────────────────────────────── */
+
+/* 1. Banner Carousel Slide Animations */
+@keyframes audioBannerSlide {
+  0% { opacity: 0; transform: translateX(30px); }
+  100% { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes audioBannerSlideOut {
+  0% { opacity: 1; transform: translateX(0); }
+  100% { opacity: 0; transform: translateX(-30px); }
+}
+
+.audiobook-banner-enter {
+  animation: audioBannerSlide 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.audiobook-banner-exit {
+  animation: audioBannerSlideOut 0.4s cubic-bezier(0.55, 0, 1, 0.45) both;
+}
+
+/* Floating animation for note or badges */
+@keyframes audioFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.animate-float {
+  animation: audioFloat 4s ease-in-out infinite;
+}
+
+/* 2. Blur background effect (Welaaa MonthBook style) */
+.audiobook-blur-bg {
+  position: absolute;
+  inset: -20px;
+  background-position: center;
+  background-size: cover;
+  filter: blur(40px) brightness(0.4);
+  opacity: 0.6;
+  transform: scale(1.1);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 3. Card hover effect */
+.audiobook-card {
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.audiobook-card:hover {
+  transform: translateY(-6px);
+}
+
+.audiobook-card:hover .audiobook-card-cover {
+  box-shadow: 0 12px 24px -10px rgba(4, 120, 87, 0.3);
+}
+
+.audiobook-card:hover img {
+  transform: scale(1.05);
+}
+
+.audiobook-card:hover .audiobook-play-overlay {
+  background-color: rgba(0, 0, 0, 0.4);
+}
+
+/* 4. Play Button Pulse Effect */
+@keyframes audioPulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+  70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+}
+
+.audio-play-btn.playing {
+  animation: audioPulse 2s infinite;
+}
+
+/* 5. Audio Wave Animation */
+@keyframes audioWave {
+  0%, 100% { height: 6px; }
+  50% { height: 24px; }
+}
+
+.audio-wave-bar {
+  display: inline-block;
+  height: 6px;
+  background-color: #10b981; /* emerald-500 */
+}
+
+.animate-audio-wave {
+  animation: audioWave 1.2s ease-in-out infinite;
+}
+
+/* 6. Horizontal scroll curation */
+.curation-scroll {
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none;  /* IE and Edge */
+}
+
+.curation-scroll::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+}
+
+.curation-scroll-item {
+  scroll-snap-align: start;
+}
+
+/* 7. Progress Bar */
+.audio-progress {
+  position: relative;
+  border-radius: 9999px;
+  transition: all 0.2s ease;
+}
+
+.audio-progress:hover {
+  height: 0.75rem; /* h-3 */
+}
+
+/* 8. Chapter List */
+.chapter-item {
+  transition: all 0.2s ease;
+}
+
+.chapter-item.active {
+  background-color: #ecfdf5; /* bg-emerald-50 */
+  border-color: #10b981; /* border-emerald-500 */
+}
+
+/* 9. Speed Control Buttons */
+.speed-btn {
+  transition: all 0.2s ease;
+}
+
+/* 10. Print Prevention */
+@media print {
+  body {
+    display: none !important;
+  }
+}
