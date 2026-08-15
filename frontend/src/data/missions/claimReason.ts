@@ -1,0 +1,253 @@
+import { LearningMission } from "@/types/learningMission";
+
+// M06-1 [🌱 시작] 복도 안전 생각과 이유
+export const claimReasonMission: LearningMission = {
+  id: "claim_reason_hallway_01",
+  title: "왜 그렇게 생각해?",
+  subtitle: "나의 생각과 올바른 까닭 말하기",
+  icon: "🗣️",
+  skill: "claim_reason",
+  difficulty: 1, // 🌱 시작
+  gradeBand: "3-4",
+  lifeArea: "school",
+  location: "school",
+  xp: 50,
+  curriculum: {
+    grade: 3,
+    subject: "국어",
+    unit: "생각과 까닭",
+    competency: "주장과 알맞은 근거 제시하기",
+  },
+  steps: [
+    {
+      stepId: "step_1",
+      title: "1단계. 나의 생각(주장) 정하기",
+      sceneSpeaker: "선생님",
+      sceneIcon: "🏫",
+      sceneText: "쉬는 시간에 복도에서 친구들이 쿵쾅쿵쾅 뛰어가고 있어요.",
+      question: "학교 복도에서는 뛰지 않고 천천히 걸어야 할까요?",
+      choices: [
+        {
+          id: "c1",
+          text: "네, 뛰지 않고 천천히 걸어야 해요",
+          icon: "🚶",
+          correct: true,
+          reason: "복도는 모두가 안전하게 이동하는 길이에요.",
+        },
+        {
+          id: "c2",
+          text: "아니요, 신나게 전력 질주해야 해요",
+          icon: "🏃",
+          correct: false,
+          reason: "복도에서 뛰면 위험한 사고가 날 수 있어요.",
+        },
+      ],
+      hint: "복도에서 모두가 안전하려면 어떻게 해야 할지 생각해 보세요.",
+      correctFeedback: "맞아요! 학교 복도에서는 뛰지 않고 조용히 걸어야 해요.",
+      wrongFeedback: "다시 한번 생각해 봐요. 복도에서 뛰면 어떤 일이 생길까요?",
+    },
+    {
+      stepId: "step_2",
+      title: "2단계. 한 번 더! 알맞은 까닭(이유) 말하기",
+      sceneSpeaker: "이음이",
+      sceneIcon: "💡",
+      sceneText: "\"복도에서는 뛰지 않고 천천히 걸어야 해요.\"",
+      question: "왜 그렇게 생각하나요? 가장 알맞은 까닭을 골라보세요.",
+      choices: [
+        {
+          id: "c1",
+          text: "친구와 부딪쳐 다칠 수 있기 때문이에요",
+          icon: "🩹",
+          correct: true,
+          reason: "부딪침과 안전사고를 막기 위한 정확한 까닭이에요.",
+        },
+        {
+          id: "c2",
+          text: "그냥 복도가 너무 길어서요",
+          icon: "🤷",
+          correct: false,
+          reason: "길이와 안전 행동은 적절한 까닭이 되지 못해요.",
+        },
+        {
+          id: "c3",
+          text: "신발 소리가 듣기 좋아서요",
+          icon: "👟",
+          correct: false,
+          reason: "안전을 위한 올바른 이유가 아니에요.",
+        },
+      ],
+      hint: "뛰었을 때 발생할 수 있는 '위험'이나 '안전'에 대한 이유를 찾아보세요.",
+      correctFeedback: "훌륭해요! 내 생각(주장)에 알맞은 까닭(이유)을 바르게 말했어요.",
+      wrongFeedback: "괜찮아요. 다른 사람을 설득할 수 있는 안전한 이유를 골라볼까요?",
+    },
+  ],
+  takeaway: "나의 생각 뒤에는 알맞고 안전한 까닭(이유)을 붙여 말해요.",
+};
+
+// M06-2 [🌿 도전] 텀블러(개인 컵) 사용과 환경 보호 까닭
+export const claimReasonMission2: LearningMission = {
+  id: "claim_reason_recycling_02",
+  title: "텀블러를 쓰면 좋은 까닭",
+  subtitle: "환경 보호 주장과 알맞은 이유 연결",
+  icon: "☕",
+  skill: "claim_reason",
+  difficulty: 2, // 🌿 도전
+  gradeBand: "4-5",
+  lifeArea: "shopping",
+  location: "cafe",
+  xp: 70,
+  curriculum: {
+    grade: 4,
+    subject: "국어",
+    unit: "의견을 제시해요",
+    competency: "환경 문제에 대한 주장과 구체적 근거",
+  },
+  steps: [
+    {
+      stepId: "step_1",
+      title: "1단계. 실천 주장 정하기",
+      sceneSpeaker: "환경 포스터",
+      sceneIcon: "🥤",
+      sceneText: "카페에서 음료를 살 때 일회용 종이컵 대신 개인 텀블러(보온병)를 사용하는 것이 좋습니다.",
+      question: "이 주장에 대해 어떻게 생각하나요?",
+      choices: [
+        {
+          id: "c1",
+          text: "동의해요, 텀블러를 사용하는 것이 좋아요",
+          icon: "👍",
+          correct: true,
+          reason: "일회용품을 줄이는 훌륭한 실천이에요.",
+        },
+        {
+          id: "c2",
+          text: "반대해요, 일회용 컵을 매일 10개씩 써야 해요",
+          icon: "👎",
+          correct: false,
+          reason: "일회용품을 남용하면 지구가 오염돼요.",
+        },
+      ],
+      hint: "지구 환경을 위해 어떤 컵을 쓰는 것이 좋을지 생각해 보세요.",
+      correctFeedback: "정답이에요! 텀블러 사용은 환경을 지키는 좋은 생각이에요.",
+      wrongFeedback: "다시 생각해 봐요. 쓰레기를 줄이려면 어떤 행동이 좋을까요?",
+    },
+    {
+      stepId: "step_2",
+      title: "2단계. 한 번 더! 가장 알맞은 이유 고르기",
+      sceneSpeaker: "이음이",
+      sceneIcon: "🌍",
+      sceneText: "\"음료를 마실 때는 개인 텀블러를 사용하는 것이 좋아요.\"",
+      question: "그렇게 주장하는 가장 올바른 까닭(이유)은 무엇일까요?",
+      choices: [
+        {
+          id: "c1",
+          text: "일회용 쓰레기를 줄여 나무와 환경을 보호할 수 있기 때문이에요",
+          icon: "🌳",
+          correct: true,
+          reason: "종이컵 생산에 쓰이는 나무를 아끼고 쓰레기를 줄이는 정확한 근거예요.",
+        },
+        {
+          id: "c2",
+          text: "텀블러가 무거워서 팔 운동이 되기 때문이에요",
+          icon: "💪",
+          correct: false,
+          reason: "환경 보호의 본질적인 까닭이 아니에요.",
+        },
+        {
+          id: "c3",
+          text: "그냥 색깔이 마음에 들어서요",
+          icon: "🎨",
+          correct: false,
+          reason: "객관적인 설득 근거가 되지 못해요.",
+        },
+      ],
+      hint: "'쓰레기 줄이기'와 '환경 보호'에 관련된 이유를 찾아보세요.",
+      correctFeedback: "완벽해요! 환경을 아끼는 타당하고 멋진 이유를 제시했어요.",
+      wrongFeedback: "다시 한번 살펴봐요. 텀블러 사용이 환경에 주는 이점을 골라볼까요?",
+    },
+  ],
+  takeaway: "주장을 펼칠 때는 다른 사람이 고개를 끄덕일 수 있는 올바른 근거를 제시해요.",
+};
+
+// M06-3 [🌳 성장] 온라인 채팅에서 존댓말과 배려를 해야 하는 까닭
+export const claimReasonMission3: LearningMission = {
+  id: "claim_reason_digital_manners_03",
+  title: "온라인 대화에서 존댓말을 써요",
+  subtitle: "디지털 언어 예절 주장과 배려의 이유 제시",
+  icon: "💬",
+  skill: "claim_reason",
+  difficulty: 3, // 🌳 성장
+  gradeBand: "5-6",
+  lifeArea: "digital",
+  location: "digital",
+  xp: 90,
+  curriculum: {
+    grade: 6,
+    subject: "국어",
+    unit: "타당한 근거로 주장해요",
+    competency: "디지털 시민의식 및 언어 예절 논증",
+  },
+  steps: [
+    {
+      stepId: "step_1",
+      title: "1단계. 나의 주장 세우기",
+      sceneSpeaker: "온라인 학급 게시판",
+      sceneIcon: "💻",
+      sceneText: "온라인 게임이나 채팅방에서 얼굴이 보이지 않는 낯선 친구와 대화할 때도 존댓말과 고운 말을 써야 합니다.",
+      question: "이 주장에 대해 나의 생각은 어떠한가요?",
+      choices: [
+        {
+          id: "c1",
+          text: "맞아요, 얼굴이 안 보여도 존댓말과 예의를 지켜야 해요",
+          icon: "✨",
+          correct: true,
+          reason: "온라인에서도 상대방은 나와 같은 소중한 사람이에요.",
+        },
+        {
+          id: "c2",
+          text: "얼굴이 안 보이니까 반말과 나쁜 말을 막 써도 돼요",
+          icon: "🚫",
+          correct: false,
+          reason: "나쁜 말은 상대방에게 큰 상처를 주며 사이버 폭력이 될 수 있어요.",
+        },
+      ],
+      hint: "상대방의 마음을 존중하는 태도를 떠올려 보세요.",
+      correctFeedback: "정답이에요! 온라인 공간에서도 예절을 지키는 것이 올바른 생각이에요.",
+      wrongFeedback: "다시 생각해 봐요. 화면 너머에 진짜 사람이 있다는 것을 기억해 볼까요?",
+    },
+    {
+      stepId: "step_2",
+      title: "2단계. 한 번 더! 가장 타당한 까닭(근거) 제시",
+      sceneSpeaker: "이음이",
+      sceneIcon: "🤝",
+      sceneText: "\"온라인 대화에서도 항상 고운 말과 존댓말을 사용해야 해요.\"",
+      question: "왜 그렇게 생각하나요? 가장 타당한 까닭을 골라보세요.",
+      choices: [
+        {
+          id: "c1",
+          text: "글자만으로는 표정을 알 수 없어 오해가 생기기 쉽고, 서로의 감정을 존중하기 위해서예요",
+          icon: "❤️",
+          correct: true,
+          reason: "텍스트 대화의 특성(오해 가능성)과 인격 존중을 모두 설명하는 가장 훌륭한 근거예요.",
+        },
+        {
+          id: "c2",
+          text: "글자 수가 많아져서 키보드 타자 연습이 되기 때문이에요",
+          icon: "⌨️",
+          correct: false,
+          reason: "예절의 이유로 적절하지 않아요.",
+        },
+        {
+          id: "c3",
+          text: "선생님이 지켜보고 계실 수도 있어서요",
+          icon: "👀",
+          correct: false,
+          reason: "누가 보지 않더라도 스스로 예절을 지키는 것이 중요해요.",
+        },
+      ],
+      hint: "온라인 대화에서 왜 오해가 생기기 쉬운지 생각해 보세요.",
+      correctFeedback: "최고예요! 상대방의 감정과 오해 방지를 고려한 깊이 있는 까닭을 말했어요.",
+      wrongFeedback: "괜찮아요. 화면 너머의 친구를 배려하는 가장 깊은 이유를 찾아보세요.",
+    },
+  ],
+  takeaway: "얼굴이 보이지 않는 공간일수록 상대방의 마음을 배려하는 바른 말을 써요.",
+};

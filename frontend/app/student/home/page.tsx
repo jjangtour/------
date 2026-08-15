@@ -23,10 +23,17 @@ const quickActions = [
     highlight: true,
   },
   {
-    title: "다른 미션 보기",
-    description: "연습할 활동을 직접 고릅니다.",
-    href: "/mission/select",
+    title: "생활 교육 미션",
+    description: "6대 국어 생활 미션을 풀어요.",
+    href: "/mission",
     icon: "🎯",
+    color: "border-emerald-300 bg-emerald-50 text-emerald-950 hover:bg-emerald-100 ring-2 ring-emerald-400",
+  },
+  {
+    title: "생활마을 미션",
+    description: "장소별 시뮬레이션 활동을 해요.",
+    href: "/mission/select",
+    icon: "🗺️",
     color: "border-sky-200 bg-sky-50 text-sky-900 hover:bg-sky-100",
   },
   {
@@ -48,6 +55,13 @@ const quickActions = [
     description: "오늘 기분을 짧게 남깁니다.",
     href: "/emotion/check",
     icon: "😊",
+    color: "border-rose-200 bg-rose-50 text-rose-900 hover:bg-rose-100",
+  },
+  {
+    title: "한입글쓰기",
+    description: "말하면 글이 되는 마법 글쓰기!",
+    href: "/simulation/one-bite-writing",
+    icon: "✍️",
     color: "border-rose-200 bg-rose-50 text-rose-900 hover:bg-rose-100",
   },
   {
@@ -116,6 +130,16 @@ const recommendedMissions = [
     level: "보통",
     steps: ["문자 분석", "감정 버리기", "안정 호흡"],
     accent: "bg-teal-100 text-teal-900",
+  },
+  {
+    title: "한입글쓰기",
+    description: "음성으로 말하면 화면에 글씨가 나타나요. 한 입 크기로 단어와 문장을 완성합니다.",
+    href: "/simulation/one-bite-writing",
+    tag: "[밀] 글쓰기",
+    icon: "✍️",
+    level: "쉬움",
+    steps: ["단어 말하기", "문장 채우기", "감각 붙이기"],
+    accent: "bg-rose-100 text-rose-900",
   },
 ];
 

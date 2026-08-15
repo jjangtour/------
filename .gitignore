@@ -5,3 +5,5 @@ KnowledgeBase.zip
 frontend_deploy.zip
 *.log
 *.tsbuildinfo
+deploy_log.txt
+mysql-data/

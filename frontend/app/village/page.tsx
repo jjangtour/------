@@ -10,6 +10,7 @@ import {
 } from "react";
 import Link from "next/link";
 import { POCKET_ITEMS } from "@/utils/items";
+import { ALL_LEARNING_MISSIONS } from "@/data/missions";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -4594,6 +4595,48 @@ export default function VillagePage() {
                   ))}
                 </div>
               </div>
+              {/* 연관 생활 국어 교육 미션 목록 */}
+              {(() => {
+                const targetArea =
+                  activeMissionModal === "bus" || activeMissionModal === "parking" ? "transport"
+                  : activeMissionModal === "kiosk" || activeMissionModal === "atm" ? "shopping"
+                  : activeMissionModal === "school" ? "school"
+                  : activeMissionModal === "mind" ? "communication"
+                  : "safety";
+
+                const relatedMissions = ALL_LEARNING_MISSIONS.filter(
+                  (m) => m.lifeArea === targetArea || (activeMissionModal === "bus" && m.location === "bus_stop")
+                ).slice(0, 2);
+
+                if (relatedMissions.length === 0) return null;
+
+                return (
+                  <div className="pt-2 border-t border-slate-100">
+                    <span className="text-[10px] font-bold text-emerald-700 block mb-1.5 flex items-center gap-1">
+                      <span>🎯</span> 이 장소와 관련된 국어 생활 미션
+                    </span>
+                    <div className="space-y-1.5">
+                      {relatedMissions.map((lm) => (
+                        <Link
+                          key={lm.id}
+                          href={`/mission/${lm.id}`}
+                          className="flex items-center justify-between gap-2 p-2 rounded-xl bg-emerald-50/70 border border-emerald-200 hover:bg-emerald-100 transition text-left group"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <span className="text-base">{lm.icon}</span>
+                            <span className="text-xs font-black text-slate-800 truncate group-hover:text-emerald-900">
+                              {lm.title}
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-black text-emerald-800 bg-white px-2 py-0.5 rounded-full border border-emerald-200 shrink-0">
+                            풀어보기 ➔
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Launch Button */}
@@ -4610,7 +4653,7 @@ export default function VillagePage() {
                 }
                 className="flex-1 py-3 bg-[#76a048] hover:bg-[#5f823a] text-white rounded-2xl font-black text-center text-sm shadow transition hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-1.5"
               >
-                🚀 미션 시작하기 ➔
+                🚀 실전 시뮬레이션 시작 ➔
               </Link>
             </div>
           </div>

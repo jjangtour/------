@@ -1372,6 +1372,12 @@ export default function BusSimulationPage() {
                 다시 하기
               </button>
               <Link
+                href="/mission/bus_find_number_01"
+                className="flex flex-1 items-center justify-center rounded-md bg-amber-400 py-3 text-sm font-black text-slate-950 hover:bg-amber-300 transition"
+              >
+                🎯 국어 미션 풀기
+              </Link>
+              <Link
                 href="/student/home"
                 className="flex flex-1 items-center justify-center rounded-md bg-emerald-500 py-3 text-sm font-black text-slate-950 hover:bg-emerald-400"
               >

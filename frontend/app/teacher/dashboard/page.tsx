@@ -1,7 +1,9 @@
 "use client";
 
-import { useMemo, useSyncExternalStore } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
+import { getSkillStatistics, getLearningLogs } from "@/utils/mission/storage";
+import { SKILL_METAS, MissionSkill } from "@/types/learningMission";
 
 type StudentResult = {
   studentName: string;
@@ -10,6 +12,11 @@ type StudentResult = {
   status: string;
   emotion: string;
   completedAt: string;
+  skill?: string;
+  difficulty?: number;
+  hintsUsed?: number;
+  wrongAttempts?: number;
+  firstTryCorrect?: boolean;
 };
 
 type StudentStat = {
@@ -70,6 +77,8 @@ function readResults(resultsText: string) {
 }
 
 export default function TeacherDashboardPage() {
+  const [selectedStudentFilter, setSelectedStudentFilter] = useState<string>("전체");
+
   const savedResultsText = useSyncExternalStore(
     subscribeToStorage,
     getSavedResults,
@@ -94,8 +103,32 @@ export default function TeacherDashboardPage() {
   const missionStats = getMissionStats(results);
   const emotionStats = getEmotionStats(results);
 
+  // 6대 핵심 역량 분석 데이터
+  const skillStats = useMemo(() => {
+    return getSkillStatistics(
+      selectedStudentFilter === "전체" ? undefined : selectedStudentFilter
+    );
+  }, [savedResultsText, selectedStudentFilter]);
+
+  const skillList: MissionSkill[] = [
+    "key_info",
+    "fact_opinion",
+    "cause_effect",
+    "social_context",
+    "information_judgment",
+    "claim_reason",
+  ];
+
+  // 취약 역량 탐색 (정답률 70% 미만 또는 가장 낮은 역량)
+  const weakSkill = useMemo(() => {
+    const validStats = Object.values(skillStats).filter((s) => s.completedCount > 0);
+    if (validStats.length === 0) return null;
+    return [...validStats].sort((a, b) => a.accuracyRate - b.accuracyRate)[0];
+  }, [skillStats]);
+
   const clearResults = () => {
     localStorage.removeItem("haemileum_results");
+    localStorage.removeItem("haemileum_learning_logs");
     window.dispatchEvent(new Event("storage"));
   };
 
@@ -190,6 +223,130 @@ export default function TeacherDashboardPage() {
             </div>
           </div>
         )}
+
+        {/* 6대 핵심 역량 성취도 및 취약 영역 분석 섹션 */}
+        <section className="mb-6 rounded-2xl border-2 border-emerald-200 bg-white p-6 shadow-sm sm:p-8">
+          <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-5 mb-6">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="rounded-full bg-emerald-100 px-3 py-0.5 text-xs font-black text-emerald-800">
+                  MVP 핵심 지표
+                </span>
+                <span className="text-xs font-bold text-slate-400">
+                  초등 3~6학년 국어 연계
+                </span>
+              </div>
+              <h2 className="mt-1 text-2xl font-black text-slate-900">
+                생활 국어 6대 핵심 역량 분석
+              </h2>
+              <p className="mt-1 text-xs font-semibold text-slate-500">
+                각 핵심 영역별 정답률, 첫 시도 성공률, 힌트 의존도를 분석하여 맞춤 지도를 돕습니다.
+              </p>
+            </div>
+
+            {/* 학생 필터 탭 */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold text-slate-500">학생 선택:</span>
+              {["전체", "김하늘", "이도윤", "박서아"].map((st) => (
+                <button
+                  key={st}
+                  type="button"
+                  onClick={() => setSelectedStudentFilter(st)}
+                  className={`rounded-full px-3 py-1 text-xs font-black transition-all ${
+                    selectedStudentFilter === st
+                      ? "bg-emerald-700 text-white shadow-sm"
+                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                  }`}
+                >
+                  {st}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* 취약 역량 알림 배너 */}
+          {weakSkill && (
+            <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+              <div className="flex items-center gap-3">
+                <span className="text-2xl">💡</span>
+                <div>
+                  <p className="text-xs font-black text-amber-900">
+                    집중 지원 추천 영역: [{weakSkill.name}] (정답률 {weakSkill.accuracyRate}%)
+                  </p>
+                  <p className="text-xs font-semibold text-amber-800">
+                    상황 제시 후 힌트 카드를 먼저 활용하도록 유도하고, 정답보다 까닭을 차분히 묻는 대화 지도가 필요합니다.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* 6개 스킬 분석 그리드 */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {skillList.map((skillKey) => {
+              const meta = SKILL_METAS[skillKey];
+              const stat = skillStats[skillKey];
+              const rate = stat.accuracyRate;
+
+              return (
+                <div
+                  key={skillKey}
+                  className="rounded-2xl border border-slate-200 bg-slate-50/60 p-4 transition hover:border-emerald-300 hover:bg-white hover:shadow-sm"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xl">{meta.icon}</span>
+                      <h3 className="text-sm font-black text-slate-900">
+                        {meta.name}
+                      </h3>
+                    </div>
+                    <span
+                      className={`text-sm font-black ${
+                        rate >= 80
+                          ? "text-emerald-700"
+                          : rate >= 60
+                          ? "text-amber-700"
+                          : "text-rose-700"
+                      }`}
+                    >
+                      {rate}%
+                    </span>
+                  </div>
+
+                  {/* 게이지 바 */}
+                  <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-slate-200">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${
+                        rate >= 80
+                          ? "bg-emerald-500"
+                          : rate >= 60
+                          ? "bg-amber-500"
+                          : "bg-rose-500"
+                      }`}
+                      style={{ width: `${Math.max(rate, 6)}%` }}
+                    />
+                  </div>
+
+                  {/* 세부 통계 지표 */}
+                  <div className="mt-3 flex items-center justify-between text-[11px] font-bold text-slate-500">
+                    <span>수행 {stat.completedCount}회</span>
+                    <span>첫 시도 {stat.firstTryRate}%</span>
+                    <span>힌트 {stat.totalHints}회</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="mt-6 flex justify-end">
+            <Link
+              href="/mission"
+              className="rounded-xl bg-emerald-700 px-4 py-2 text-xs font-black text-white hover:bg-emerald-800 transition"
+            >
+              교육콘텐츠 전체 목록 보기 ➔
+            </Link>
+          </div>
+        </section>
 
         <div className="mb-6 grid grid-cols-1 gap-6 xl:grid-cols-[1fr_0.9fr]">
           <section className="rounded-lg border border-slate-200 bg-white p-5 shadow-sm sm:p-6">

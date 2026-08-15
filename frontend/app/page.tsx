@@ -518,6 +518,114 @@ export default function Home() {
           </div>
         </div>
       </section>
+      {/* ── 7.7 한입글쓰기 Section ────────────────────────────────────── */}
+      <section id="one-bite-writing-feature" className="bg-gradient-to-br from-rose-50/50 to-stone-50 py-24">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6">
+          <div className="grid items-center gap-12 lg:grid-cols-2">
+            {/* Left: Copy & Features */}
+            <div>
+              <p className="text-sm font-black uppercase tracking-widest text-rose-600">
+                신규 콘텐츠 출시
+              </p>
+              <h2 className="mt-3 text-3xl font-black text-slate-950 sm:text-4xl">
+                말하면 글이 되는 마법,
+                <br />
+                <span className="text-rose-600">한입글쓰기</span> 오픈!
+              </h2>
+              <p className="mt-4 text-base font-semibold leading-7 text-slate-500">
+                경계선 지능 아동의 인지적 부담을 최소화하고 표현의 성취감을 주는 단계별 문해력·글쓰기 프로그램입니다. 음성으로 말하면 화면에 글씨가 나타나, 한 입 크기로 단어와 문장을 완성합니다.
+              </p>
+
+              <div className="mt-8 space-y-4">
+                {[
+                  {
+                    icon: '🎤',
+                    title: '음성 인식으로 쉬운 글쓰기',
+                    desc: '마이크 버튼을 누르고 말하면 화면에 글씨가 나타나요. 손으로 쓰기 어려운 아이도 생각을 표현할 수 있어요.',
+                  },
+                  {
+                    icon: '🧩',
+                    title: '한 입 크기 3단계 학습',
+                    desc: '단어 말하기 → 한 문장 채우기 → 감각 살 붙이기, 인지 부담 없이 차근차근 완성해요.',
+                  },
+                  {
+                    icon: '💬',
+                    title: '말하기에서 글쓰기로 자연스러운 연결',
+                    desc: '먼저 말로 표현하고, 그 말이 글이 되는 과정을 체험하며 문해력의 기초를 다져요.',
+                  },
+                  {
+                    icon: '🌟',
+                    title: '성취감 중심의 칭찬 피드백',
+                    desc: '짧은 문장이라도 스스로 완성하면 즉각적인 칭찬과 보상으로 학습 무력감을 해소해요.',
+                  },
+                ].map((item) => (
+                  <div key={item.title} className="flex items-start gap-4">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-rose-100 text-lg">
+                      {item.icon}
+                    </span>
+                    <div>
+                      <h3 className="text-sm font-black text-slate-900">{item.title}</h3>
+                      <p className="mt-0.5 text-sm font-semibold text-slate-500">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-8">
+                <Link
+                  href="/simulation/one-bite-writing"
+                  className="inline-flex rounded-full bg-rose-600 px-6 py-3.5 text-sm font-black text-white shadow-lg transition hover:bg-rose-700 active:scale-95"
+                >
+                  ✍️ 한입글쓰기 체험하기 →
+                </Link>
+              </div>
+            </div>
+
+            {/* Right: Visual demo */}
+            <div className="relative flex justify-center">
+              <div className="relative w-full max-w-sm">
+                <div className="absolute inset-0 rounded-full bg-rose-400/10 blur-3xl" />
+                <div className="relative overflow-hidden rounded-3xl bg-white p-6 shadow-xl ring-1 ring-slate-200">
+                  {/* Step badges */}
+                  <div className="flex gap-2 mb-5">
+                    <span className="rounded-full bg-rose-500 px-3 py-1 text-xs font-black text-white">1단계</span>
+                    <span className="rounded-full bg-rose-400 px-3 py-1 text-xs font-black text-white">2단계</span>
+                    <span className="rounded-full bg-rose-300 px-3 py-1 text-xs font-black text-white">3단계</span>
+                  </div>
+
+                  {/* Mock topic card */}
+                  <div className="rounded-2xl bg-rose-50 p-5 text-center mb-4">
+                    <span className="text-6xl block">🍓</span>
+                    <p className="mt-2 text-lg font-black text-rose-700">딸기</p>
+                  </div>
+
+                  {/* Mock word bubbles */}
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    <span className="rounded-full bg-rose-500 px-3 py-1.5 text-sm font-black text-white">빨갛다</span>
+                    <span className="rounded-full bg-rose-500 px-3 py-1.5 text-sm font-black text-white">달다</span>
+                    <span className="rounded-full bg-rose-500 px-3 py-1.5 text-sm font-black text-white">맛있다</span>
+                  </div>
+
+                  {/* Mock sentence */}
+                  <div className="rounded-xl bg-emerald-50 p-4">
+                    <p className="text-xs font-bold text-emerald-600 mb-1">완성 문장 ✨</p>
+                    <p className="text-base font-black text-emerald-800">
+                      &ldquo;나는 오늘 <span className="underline decoration-yellow-400 decoration-2">달콤한</span> 딸기를 먹었다.&rdquo;
+                    </p>
+                  </div>
+
+                  {/* Mock mic button */}
+                  <div className="mt-4 flex justify-center">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-rose-500 text-2xl text-white shadow-lg">
+                      🎤
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* ── 8. Educational Trust ─────────────────────────────────────────── */}
       <section id="trust" className="bg-amber-50 py-24">

@@ -283,6 +283,24 @@ const zones: Zone[] = [
         ],
       },
       {
+        id: "one-bite-writing",
+        name: "한입글방",
+        icon: "✍️",
+        missions: [
+          {
+            id: "one-bite-writing-1",
+            title: "한입글쓰기",
+            description:
+              "음성으로 말하면 화면에 글씨가 나타나요. 한 입 크기로 단어와 문장을 완성합니다.",
+            level: "쉬움",
+            time: "5분",
+            steps: ["단어 말하기", "문장 채우기", "감각 붙이기"],
+            path: "/simulation/one-bite-writing",
+            status: "바로 시작",
+          },
+        ],
+      },
+      {
         id: "bathhouse",
         name: "목욕탕",
         icon: "♨️",
@@ -420,6 +438,35 @@ export default function MissionSelectPage() {
                 학생 홈
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* Learning Mission Banner */}
+        <div className="mb-6 overflow-hidden rounded-2xl border-2 border-emerald-300 bg-gradient-to-r from-emerald-50 via-teal-50 to-green-50 p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-600 text-3xl text-white shadow-sm">
+                🎯
+              </span>
+              <div>
+                <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-black text-emerald-800">
+                  신규 오픈
+                </span>
+                <h2 className="mt-1 text-xl font-black text-slate-900">
+                  생활 국어 6대 핵심 교육콘텐츠
+                </h2>
+                <p className="text-xs font-bold text-slate-600">
+                  중요 정보 찾기, 사실·의견, 원인·결과, 마음 읽기, 정보 판단, 생각·이유 미션을 풀어보세요!
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => router.push("/mission")}
+              className="rounded-xl bg-emerald-700 px-5 py-3 text-sm font-black text-white shadow-sm hover:bg-emerald-800 transition active:scale-95"
+            >
+              교육콘텐츠 시작하기 ➔
+            </button>
           </div>
         </div>
 
